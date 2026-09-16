@@ -62,3 +62,7 @@ Thumbs.db
 !.vscode/extensions.json
 *.log
 npm-debug.log*
+
+# Assistant tooling state. This directory holds project-local notes and working state for
+# the AI assistant; it is not application source and is not part of the product.
+.workbuddy-ai/
