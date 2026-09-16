@@ -1,0 +1,252 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+ * SignSpeak design tokens.
+ *
+ * Three themes are provided and switched with `data-theme` on <html>:
+ *   (unset)      -> "day"    light theme, the default
+ *   "dark"       -> night theme
+ *   "contrast"   -> high-contrast theme (black on white, 2px borders, no shadows)
+ *
+ * All values are bare `R G B` triplets so Tailwind can apply opacity modifiers
+ * (e.g. `bg-primary/10`) through the `rgb(var(--token) / <alpha-value>)` mapping in
+ * tailwind.config.ts.
+ *
+ * Contrast budget (docs/ui-ux-specification.md §1): body text >= 4.5:1, UI borders
+ * >= 3:1, on every theme. See docs/implementation-decisions.md (D-14) for the audit.
+ */
+
+:root {
+  color-scheme: light;
+
+  --ss-bg: 244 246 252;
+  --ss-surface: 255 255 255;
+  --ss-raised: 255 255 255;
+  --ss-line: 223 228 240;
+  --ss-line-strong: 194 202 220;
+  --ss-ink: 15 21 40;
+  --ss-ink-muted: 74 84 110;
+  --ss-ink-faint: 106 116 142;
+
+  --ss-primary: 67 56 202;
+  --ss-primary-strong: 51 42 168;
+  --ss-primary-soft: 236 236 254;
+  --ss-primary-ink: 255 255 255;
+
+  --ss-accent: 13 128 122;
+  --ss-accent-soft: 224 246 243;
+  --ss-accent-ink: 255 255 255;
+
+  --ss-danger: 190 30 45;
+  --ss-danger-strong: 154 22 35;
+  --ss-danger-soft: 254 233 235;
+  --ss-danger-ink: 255 255 255;
+
+  --ss-success: 21 116 62;
+  --ss-success-soft: 224 245 232;
+  --ss-success-ink: 255 255 255;
+
+  --ss-warning: 158 74 8;
+  --ss-warning-soft: 253 241 224;
+  --ss-warning-ink: 255 255 255;
+
+  --ss-focus: 30 64 175;
+  --ss-shadow: 15 23 42;
+  --ss-border-width: 1px;
+
+  /* System stack only: no third-party font CDN request, which keeps the
+     "no data leaves the device" claim (docs/privacy-and-safety.md §3) literally true.
+     Nirmala UI / Noto Sans Devanagari cover the Devanagari strings used by hi-IN. */
+  --ss-font-sans: system-ui, -apple-system, 'Segoe UI Variable Text', 'Segoe UI', Roboto,
+    'Helvetica Neue', 'Noto Sans', 'Nirmala UI', 'Noto Sans Devanagari', 'Arial Unicode MS',
+    sans-serif;
+  --ss-font-display: var(--ss-font-sans);
+}
+
+[data-theme='dark'] {
+  color-scheme: dark;
+
+  --ss-bg: 9 12 23;
+  --ss-surface: 17 22 40;
+  --ss-raised: 24 30 52;
+  --ss-line: 42 50 78;
+  --ss-line-strong: 68 78 112;
+  --ss-ink: 237 241 251;
+  --ss-ink-muted: 172 182 206;
+  --ss-ink-faint: 148 158 184;
+
+  --ss-primary: 152 146 255;
+  --ss-primary-strong: 178 174 255;
+  --ss-primary-soft: 36 34 78;
+  --ss-primary-ink: 12 14 30;
+
+  --ss-accent: 66 219 199;
+  --ss-accent-soft: 15 52 51;
+  --ss-accent-ink: 4 22 22;
+
+  --ss-danger: 255 138 145;
+  --ss-danger-strong: 255 174 179;
+  --ss-danger-soft: 66 24 30;
+  --ss-danger-ink: 34 6 10;
+
+  --ss-success: 96 226 148;
+  --ss-success-soft: 17 50 33;
+  --ss-success-ink: 4 26 12;
+
+  --ss-warning: 253 199 92;
+  --ss-warning-soft: 58 43 12;
+  --ss-warning-ink: 32 21 2;
+
+  --ss-focus: 147 197 253;
+  --ss-shadow: 0 0 0;
+  --ss-border-width: 1px;
+}
+
+[data-theme='contrast'] {
+  color-scheme: light;
+
+  --ss-bg: 255 255 255;
+  --ss-surface: 255 255 255;
+  --ss-raised: 255 255 255;
+  --ss-line: 0 0 0;
+  --ss-line-strong: 0 0 0;
+  --ss-ink: 0 0 0;
+  --ss-ink-muted: 24 24 24;
+  --ss-ink-faint: 40 40 40;
+
+  --ss-primary: 0 0 0;
+  --ss-primary-strong: 0 0 0;
+  --ss-primary-soft: 255 255 255;
+  --ss-primary-ink: 255 255 255;
+
+  --ss-accent: 0 66 66;
+  --ss-accent-soft: 255 255 255;
+  --ss-accent-ink: 255 255 255;
+
+  --ss-danger: 158 0 16;
+  --ss-danger-strong: 120 0 12;
+  --ss-danger-soft: 255 255 255;
+  --ss-danger-ink: 255 255 255;
+
+  --ss-success: 0 84 40;
+  --ss-success-soft: 255 255 255;
+  --ss-success-ink: 255 255 255;
+
+  --ss-warning: 106 46 0;
+  --ss-warning-soft: 255 255 255;
+  --ss-warning-ink: 255 255 255;
+
+  --ss-focus: 0 0 0;
+  --ss-shadow: 255 255 255;
+  --ss-border-width: 2px;
+}
+
+@layer base {
+  html {
+    /* docs/ui-ux-specification.md §1: base font size 18px, scaled by the in-app
+       text-size control (settings.textScale) via the --ss-text-scale variable. */
+    font-size: calc(18px * var(--ss-text-scale, 1));
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply bg-bg text-ink font-sans antialiased;
+    min-height: 100dvh;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    @apply font-display text-balance;
+  }
+
+  /* Visible, high-contrast focus ring on every interactive element
+     (docs/ui-ux-specification.md §1 "Focus"). */
+  :where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+    outline: 3px solid rgb(var(--ss-focus));
+    outline-offset: 2px;
+    border-radius: 6px;
+  }
+
+  /* Never remove the native outline for keyboard users, and never trap focus
+     inside a scroll container without a visible ring. */
+  ::selection {
+    background: rgb(var(--ss-primary) / 0.28);
+  }
+
+  /* Honour the OS reduced-motion setting (docs/ui-ux-specification.md §1). */
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
+
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.001ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.001ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+
+  /* Explicit user override from Settings > Reduce motion. */
+  [data-reduce-motion='true'] *,
+  [data-reduce-motion='true'] *::before,
+  [data-reduce-motion='true'] *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
+
+@layer components {
+  /* Border width is theme-driven so the high-contrast theme can thicken outlines. */
+  .ss-bordered {
+    border-width: var(--ss-border-width);
+    border-style: solid;
+    border-color: rgb(var(--ss-line));
+  }
+
+  [data-theme='contrast'] .ss-shadow-none-in-contrast {
+    box-shadow: none;
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  .text-pretty {
+    text-wrap: pretty;
+  }
+
+  /* 4:3 camera preview used by the sign-recognition panel
+     (docs/ui-ux-specification.md §4 "Mobile"). */
+  .aspect-camera {
+    aspect-ratio: 4 / 3;
+  }
+
+  .scrollbar-slim {
+    scrollbar-width: thin;
+  }
+}
+
+/* On-screen only, for screen readers. */
+.sr-only-focusable:not(:focus):not(:focus-within) {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}

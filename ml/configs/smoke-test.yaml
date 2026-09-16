@@ -1,0 +1,74 @@
+# SignSpeak training configuration — pipeline smoke test.
+#
+# WHAT THIS IS FOR
+# ----------------
+# To prove the whole path works end to end — features -> dataset -> training ->
+# held-out-signer evaluation -> ONNX export -> browser inference — *before* any real data
+# exists. It trains on procedurally generated landmarks, which are not signs.
+#
+# WHAT THIS IS NOT
+# ----------------
+# This is not a sign-recognition model. The synthetic data has no relationship to ISL.
+# The resulting model is written with `notForRealUse: true` and
+# `trainingSource: synthetic_smoke_test`, and the app displays a permanent banner saying
+# so. It will never be presented as recognising signs.
+#
+# Run it with:
+#
+#   npm run ml:smoke
+#
+# It needs no dataset and no GPU; it finishes in a few seconds on a laptop.
+
+run:
+  model_version: sign-clf-smoke
+  # The smoke test generates its own data, so this directory is not read.
+  data_dir: ml/data
+  artifact_dir: ml/artifacts/smoke
+  # Leave false so a smoke-test model never ends up in public/models by accident.
+  stage_for_browser: false
+
+synthetic:
+  # Generate this dataset in memory instead of reading ml/data.
+  enabled: true
+  # Six "signers" so that held-out-signer splitting is exercised for real, rather than
+  # silently falling back to a recording-level split.
+  signer_count: 6
+  # Signs plus the negative class.
+  positive_classes: 6
+  # Repetitions per signer per class. Kept small so the run stays fast.
+  reps_per_signer: 12
+  # Frames per repetition, i.e. the length of one recorded window.
+  frames_per_rep: 18
+  # Explicitly labelled so no downstream artefact can be mistaken for real data.
+  label: synthetic_smoke_test
+  seed: 424242
+
+data:
+  include_learners: true
+  negative_class: OTHER
+  vocabulary_source: ""
+
+split:
+  test_signer_count: 2
+  seed: 20260101
+  # Leave-one-signer-out over six synthetic signers is fast and genuinely informative
+  # about whether the evaluation code works.
+  run_loso: true
+
+training:
+  # A single candidate keeps the smoke test quick. Change to [] to exercise the
+  # comparison loop as well.
+  algorithms:
+    - random_forest
+  seed: 20260101
+
+decision:
+  confidence_threshold: 0.7
+  margin_threshold: 0.2
+  min_hand_score: 0.5
+  window_size: 5
+  required_votes: 3
+
+reporting:
+  verbose: true
+  write_json_report: true

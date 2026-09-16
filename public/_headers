@@ -1,0 +1,39 @@
+# Static-host response headers for the SignSpeak static export.
+#
+# Netlify, Cloudflare Pages and GitLab Pages (with the `_headers` convention) read this
+# file directly. `next.config.mjs` applies the same headers for a server build, but
+# Next.js cannot emit headers for `output: 'export'`, which is the default build.
+#
+# Note what is deliberately ABSENT: Cross-Origin-Embedder-Policy / Cross-Origin-Opener-Policy.
+# Those would unlock multi-threaded WASM, but they also break third-party embeds, and
+# onnxruntime-web is configured single-threaded in lib/model/loader.ts precisely so the app
+# works on hosts that cannot set headers at all. Do not add COEP/COOP without revisiting
+# that decision.
+
+/*
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  X-Frame-Options: SAMEORIGIN
+  Permissions-Policy: camera=(self), microphone=(self), geolocation=(), payment=(), usb=()
+
+# The wasm runtime and model files are content-addressed by version and safe to cache hard.
+/ort/*
+  Cache-Control: public, max-age=31536000, immutable
+
+/mediapipe/*
+  Cache-Control: public, max-age=31536000, immutable
+
+/models/*.task
+  Cache-Control: public, max-age=31536000, immutable
+
+# An exported model must NOT be cached hard: replacing it is how a corrected model ships,
+# and a stale cached classifier would silently disagree with the model card.
+/models/*.onnx
+  Cache-Control: public, max-age=300, must-revalidate
+
+/models/*.json
+  Cache-Control: public, max-age=300, must-revalidate
+
+# HTML is small and must reflect the latest deploy.
+/*.html
+  Cache-Control: public, max-age=0, must-revalidate

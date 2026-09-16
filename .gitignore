@@ -1,0 +1,64 @@
+# Dependencies
+node_modules/
+
+# Next.js build output
+.next/
+out/
+next-env.d.ts
+
+# TypeScript incremental build info
+*.tsbuildinfo
+
+# Environment files. `.env.example` is committed; real values are not.
+.env
+.env.local
+.env.*.local
+
+# Python
+ml/.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.ipynb_checkpoints/
+
+# Trained artefacts. The model card and run report are records of a specific training run
+# and are reproducible from the config + dataset, so they are not committed. `public/models`
+# holds the MediaPipe `.task` files, which ARE committed (see public/models/README.md).
+ml/artifacts/
+ml/reports/
+
+# Collected landmark data. Written as `ml/data/*` rather than `ml/data/` on purpose: git
+# cannot re-include a file whose parent directory is excluded, so excluding the directory
+# itself would also hide the README below.
+ml/data/*
+# Keep the placeholder files that document the empty directories.
+!ml/data/README.md
+!ml/artifacts/.gitkeep
+
+# MediaPipe and ONNX Runtime WASM are copied in by `npm run postinstall` /
+# `node scripts/setup-assets.mjs`, so they are not committed.
+public/mediapipe/
+public/ort/
+
+# MediaPipe model files are large binaries fetched by scripts/setup-assets.mjs.
+public/models/*.task
+
+# Local landmark log exports. These contain landmark data collected from real people and
+# must never be committed, even pseudonymously.
+*.landmark-log.json
+signspeak-landmark-log*.json
+
+# Verified ISL clips are large and may carry a restrictive licence. They are added to
+# public/clips deliberately, with a licence and attribution recorded in data/phrases.json.
+public/clips/*
+!public/clips/README.md
+
+# Editor and OS noise
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
+*.log
+npm-debug.log*

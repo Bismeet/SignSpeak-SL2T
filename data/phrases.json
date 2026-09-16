@@ -1,0 +1,1587 @@
+{
+  "schemaVersion": 1,
+  "vocabularyVersion": "ss-phrases-v1",
+  "notes": [
+    "Every phrase is validated by tests/phrases-schema.test.ts (T-PHR-06) and tests/clips-exist.test.ts (T-PHR-01).",
+    "ALL entries are currently validation.status = 'unverified', which the interface labels 'draft'. No ISL clip has been verified by a qualified ISL signer, so no entry has a clip and no entry has an islGloss.",
+    "The app hides draft phrases by default (FR-HOSP-05). Turning on Settings > 'Show unverified phrases' reveals them with a visible UNVERIFIED badge; it never presents them as verified ISL.",
+    "textHi strings are draft translations written by the project team, not by a professional translator, and need native-speaker review before any clinical deployment.",
+    "islGloss must only be filled after an ISL signer has confirmed the canonical form against the ISLRTC dictionary (Q1 in docs/open-questions-and-decisions.md).",
+    "See docs/implementation-decisions.md D-16 for why no placeholder clips are bundled."
+  ],
+  "phrases": [
+    {
+      "id": "q_where_hurt",
+      "category": "staff_questions",
+      "speaker": "hearing_user",
+      "textEn": "Where does it hurt?",
+      "textHi": "दर्द कहाँ है?",
+      "aliasesEn": [
+        "where is the pain",
+        "where do you have pain",
+        "where is it hurting",
+        "where does it hurt you",
+        "where do you feel pain",
+        "show me where it hurts"
+      ],
+      "aliasesHi": [
+        "दर्द कहां है",
+        "कहाँ दर्द है"
+      ],
+      "islGloss": "",
+      "clip": {
+        "type": "none",
+        "src": ""
+      },
+      "validation": {
+        "status": "unverified",
+        "verifiedBy": "",
+        "verifiedOn": ""
+      },
+      "licence": "",
+      "attribution": "",
+      "emergency": false,
+      "order": 10,
+      "caption": ""
+    },
+    {
+      "id": "q_pain_scale",
+      "category": "staff_questions",
+      "speaker": "hearing_user",
+      "textEn": "How much pain, from 0 to 10?",
+      "textHi": "दर्द कितना है, 0 से 10 में?",
+      "aliasesEn": [
+        "how much pain",
+        "rate your pain",
+        "pain scale",
+        "how bad is the pain",
+        "how much does it hurt",
+        "on a scale of zero to ten how much pain"
+      ],
+      "aliasesHi": [
+        "दर्द कितना है",
+        "दर्द का स्तर"
+      ],
+      "islGloss": "",
+      "clip": {
+        "type": "none",
+        "src": ""
+      },
+      "validation": {
+        "status": "unverified",
+        "verifiedBy": "",
+        "verifiedOn": ""
+      },
+      "licence": "",
+      "attribution": "",
+      "emergency": false,
+      "order": 20,
+      "caption": ""
+    },
+    {
+      "id": "q_since_when",
+      "category": "staff_questions",
+      "speaker": "hearing_user",
+      "textEn": "Since when?",
+      "textHi": "कब से?",
+      "aliasesEn": [
+        "how long has this been going on",
+        "when did it start",
+        "since when have you had this",
+        "how long have you had this pain",
+        "when did the pain start"
+      ],
+      "aliasesHi": [
+        "कब से है",
+        "यह कब से है"
+      ],
+      "islGloss": "",
+      "clip": {
+        "type": "none",
+        "src": ""
+      },
+      "validation": {
+        "status": "unverified",
+        "verifiedBy": "",
+        "verifiedOn": ""
+      },
+      "licence": "",
+      "attribution": "",
+      "emergency": false,
+      "order": 30,
+      "caption": ""
+    },
+    {
+      "id": "q_allergy",
+      "category": "staff_questions",
+      "speaker": "hearing_user",
+      "textEn": "Are you allergic to any medicine?",
+      "textHi": "क्या आपको किसी दवा से एलर्जी है?",
+      "aliasesEn": [
+        "any allergies",
+        "are you allergic to anything",
+        "do you have any medicine allergies",
+        "are you allergic to any medication"
+      ],
+      "aliasesHi": [
+        "क्या आपको एलर्जी है",
+        "किसी दवा से एलर्जी"
+      ],
+      "islGloss": "",
+      "clip": {
+        "type": "none",
+        "src": ""
+      },
+      "validation": {
+        "status": "unverified",
+        "verifiedBy": "",
+        "verifiedOn": ""
+      },
+      "licence": "",
+      "attribution": "",
+      "emergency": false,
+      "order": 40,
+      "caption": ""
+    },
+    {
+      "id": "q_medicines",
+      "category": "staff_questions",
+      "speaker": "hearing_user",
+      "textEn": "Do you take any medicines?",
+      "textHi": "क्या आप कोई दवा लेते हैं?",
+      "aliasesEn": [
+        "are you on any medication",
+        "do you take tablets",
+        "any regular medicines",
+        "do you take any medication regularly"
+      ],
+      "aliasesHi": [
+        "क्या आप दवा लेते हैं",
+        "कोई दवा चल रही है"
+      ],
+      "islGloss": "",
+      "clip": {
+        "type": "none",
+        "src": ""
+      },
+      "validation": {
+        "status": "unverified",
+        "verifiedBy": "",
+        "verifiedOn": ""
+      },
+      "licence": "",
+      "attribution": "",
+      "emergency": false,
+      "order": 50,
+      "caption": ""
+    },
+    {
+      "id": "q_pregnant",
+      "category": "staff_questions",
+      "speaker": "hearing_user",
+      "textEn": "Are you pregnant?",
+      "textHi": "क्या आप गर्भवती हैं?",
+      "aliasesEn": [
+        "are you expecting",
+        "are you pregnant now",
+        "could you be pregnant"
+      ],
+      "aliasesHi": [
+        "क्या आप गर्भवती हैं"
+      ],
+      "islGloss": "",
+      "clip": {
+        "type": "none",
+        "src": ""
+      },
+      "validation": {
+        "status": "unverified",
+        "verifiedBy": "",
+        "verifiedOn": ""
+      },
+      "licence": "",
+      "attribution": "",
+      "emergency": false,
+      "order": 60,
+      "caption": ""
+    },
+    {
+      "id": "q_fever",
+      "category": "staff_questions",
+      "speaker": "hearing_user",
+      "textEn": "Do you have a fever?",
+      "textHi": "क्या आपको बुखार है?",
+      "aliasesEn": [
+        "have you got fever",
+        "do you feel hot",
+        "is there fever",
+        "do you have temperature"
+      ],
+      "aliasesHi": [
+        "क्या बुखार है",
+        "बुखार है क्या"
+      ],
+      "islGloss": "",
+      "clip": {
+        "type": "none",
+        "src": ""
+      },
+      "validation": {
+        "status": "unverified",
+        "verifiedBy": "",
+        "verifiedOn": ""
+      },
+      "licence": "",
+      "attribution": "",
+      "emergency": false,
+      "order": 70,
+      "caption": ""
+    },
+    {
+      "id": "q_breathe",
+      "category": "staff_questions",
+      "speaker": "hearing_user",
+      "textEn": "Can you breathe normally?",
+      "textHi": "क्या आप सामान्य रूप से साँस ले पा रहे हैं?",
+      "aliasesEn": [
+        "is your breathing normal",
+        "any difficulty breathing",
+        "are you able to breathe",
+        "do you have trouble breathing"
+      ],
+      "aliasesHi": [
+        "साँस ले पा रहे हैं",
+        "सांस में तकलीफ"
+      ],
+      "islGloss": "",
+      "clip": {
+        "type": "none",
+        "src": ""
+      },
+      "validation": {
+        "status": "unverified",
+        "verifiedBy": "",
+        "verifiedOn": ""
+      },
+      "licence": "",
+      "attribution": "",
+      "emergency": false,
+      "order": 80,
+      "caption": ""
+    },
+    {
+      "id": "q_understand",
+      "category": "staff_questions",
+      "speaker": "hearing_user",
+      "textEn": "Do you understand?",
+      "textHi": "क्या आप समझ रहे हैं?",
+      "aliasesEn": [
+        "is that clear",
+        "did you understand",
+        "do you follow",
+        "understood"
+      ],
+      "aliasesHi": [
+        "समझ रहे हैं",
+        "समझ आया"
+      ],
+      "islGloss": "",
+      "clip": {
+        "type": "none",
+        "src": ""
+      },
+      "validation": {
+        "status": "unverified",
+        "verifiedBy": "",
+        "verifiedOn": ""
+      },
+      "licence": "",
+      "attribution": "",
+      "emergency": false,
+      "order": 90,
+      "caption": ""
+    },
+    {
+      "id": "q_who_call",
+      "category": "staff_questions",
+      "speaker": "hearing_user",
+      "textEn": "Who should we call?",
+      "textHi": "हमें किसे बुलाना चाहिए?",
+      "aliasesEn": [
+        "who should i call",
+        "who can we contact",
+        "is there someone we should call",
+        "who do you want us to call"
+      ],
+      "aliasesHi": [
+        "किसे बुलाऊँ",
+        "किसे बुलाना है"
+      ],
+      "islGloss": "",
+      "clip": {
+        "type": "none",
+        "src": ""
+      },
+      "validation": {
+        "status": "unverified",
+        "verifiedBy": "",
+        "verifiedOn": ""
+      },
+      "licence": "",
+      "attribution": "",
+      "emergency": false,
+      "order": 100,
+      "caption": ""
+    },
+    {
+      "id": "i_sit_down",
+      "category": "staff_instructions",
+      "speaker": "hearing_user",
+      "textEn": "Sit down.",
+      "textHi": "बैठ जाइए।",
+      "aliasesEn": [
+        "please sit",
+        "please sit down",
+        "take a seat",
+        "sit please"
+      ],
+      "aliasesHi": [
+        "बैठिए",
+        "बैठ जाइए"
+      ],
+      "islGloss": "",
+      "clip": {
+        "type": "none",
+        "src": ""
+      },
+      "validation": {
+        "status": "unverified",
+        "verifiedBy": "",
+        "verifiedOn": ""
+      },
+      "licence": "",
+      "attribution": "",
+      "emergency": false,
+      "order": 10,
+      "caption": ""
+    },
+    {
+      "id": "i_lie_down",
+      "category": "staff_instructions",
+      "speaker": "hearing_user",
+      "textEn": "Lie down.",
+      "textHi": "लेट जाइए।",
+      "aliasesEn": [
+        "please lie down",
+        "lie on the bed",
+        "please lie on the bed"
+      ],
+      "aliasesHi": [
+        "लेटिए",
+        "लेट जाइए"
+      ],
+      "islGloss": "",
+      "clip": {
+        "type": "none",
+        "src": ""
+      },
+      "validation": {
+        "status": "unverified",
+        "verifiedBy": "",
+        "verifiedOn": ""
+      },
+      "licence": "",
+      "attribution": "",
+      "emergency": false,
+      "order": 20,
+      "caption": ""
+    },
+    {
+      "id": "i_show_me",
+      "category": "staff_instructions",
+      "speaker": "hearing_user",
+      "textEn": "Please show me.",
+      "textHi": "कृपया मुझे दिखाइए।",
+      "aliasesEn": [
+        "show me",
+        "can you show me",
+        "please point to it"
+      ],
+      "aliasesHi": [
+        "मुझे दिखाइए",
+        "दिखाइए"
+      ],
+      "islGloss": "",
+      "clip": {
+        "type": "none",
+        "src": ""
+      },
+      "validation": {
+        "status": "unverified",
+        "verifiedBy": "",
+        "verifiedOn": ""
+      },
+      "licence": "",
+      "attribution": "",
+      "emergency": false,
+      "order": 30,
+      "caption": ""
+    },
+    {
+      "id": "i_open_mouth",
+      "category": "staff_instructions",
+      "speaker": "hearing_user",
+      "textEn": "Open your mouth.",
+      "textHi": "मुँह खोलिए।",
+      "aliasesEn": [
+        "please open your mouth",
+        "open your mouth please",
+        "say aah"
+      ],
+      "aliasesHi": [
+        "मुँह खोलिए",
+        "मुंह खोलें"
+      ],
+      "islGloss": "",
+      "clip": {
+        "type": "none",
+        "src": ""
+      },
+      "validation": {
+        "status": "unverified",
+        "verifiedBy": "",
+        "verifiedOn": ""
+      },
+      "licence": "",
+      "attribution": "",
+      "emergency": false,
+      "order": 40,
+      "caption": ""
+    },
+    {
+      "id": "i_deep_breath",
+      "category": "staff_instructions",
+      "speaker": "hearing_user",
+      "textEn": "Take a deep breath.",
+      "textHi": "गहरी साँस लीजिए।",
+      "aliasesEn": [
+        "breathe deeply",
+        "please take a deep breath",
+        "deep breath please"
+      ],
+      "aliasesHi": [
+        "गहरी साँस लीजिए",
+        "गहरी सांस लें"
+      ],
+      "islGloss": "",
+      "clip": {
+        "type": "none",
+        "src": ""
+      },
+      "validation": {
+        "status": "unverified",
+        "verifiedBy": "",
+        "verifiedOn": ""
+      },
+      "licence": "",
+      "attribution": "",
+      "emergency": false,
+      "order": 50,
+      "caption": ""
+    },
+    {
+      "id": "i_no_eat_drink",
+      "category": "staff_instructions",
+      "speaker": "hearing_user",
+      "textEn": "Do not eat or drink now.",
+      "textHi": "अभी कुछ खाइए या पीजिए नहीं।",
+      "aliasesEn": [
+        "do not eat or drink anything",
+        "nothing by mouth",
+        "do not have anything to eat or drink",
+        "you must not eat or drink"
+      ],
+      "aliasesHi": [
+        "कुछ मत खाइए",
+        "कुछ न खाएं न पिएं"
+      ],
+      "islGloss": "",
+      "clip": {
+        "type": "none",
+        "src": ""
+      },
+      "validation": {
+        "status": "unverified",
+        "verifiedBy": "",
+        "verifiedOn": ""
+      },
+      "licence": "",
+      "attribution": "",
+      "emergency": false,
+      "order": 60,
+      "caption": ""
+    },
+    {
+      "id": "i_sign_here",
+      "category": "staff_instructions",
+      "speaker": "hearing_user",
+      "textEn": "Sign here for consent.",
+      "textHi": "सहमति के लिए यहाँ हस्ताक्षर कीजिए।",
+      "aliasesEn": [
+        "sign here",
+        "please sign here",
+        "sign here for consent",
+        "we need your signature"
+      ],
+      "aliasesHi": [
+        "यहाँ हस्ताक्षर कीजिए",
+        "सहमति पत्र पर हस्ताक्षर"
+      ],
+      "islGloss": "",
+      "clip": {
+        "type": "none",
+        "src": ""
+      },
+      "validation": {
+        "status": "unverified",
+        "verifiedBy": "",
+        "verifiedOn": ""
+      },
+      "licence": "",
+      "attribution": "",
+      "emergency": false,
+      "order": 70,
+      "caption": ""
+    },
+    {
+      "id": "i_wait_here",
+      "category": "staff_instructions",
+      "speaker": "hearing_user",
+      "textEn": "Please wait here.",
+      "textHi": "कृपया यहाँ प्रतीक्षा कीजिए।",
+      "aliasesEn": [
+        "wait here",
+        "please wait",
+        "stay here please",
+        "please stay here"
+      ],
+      "aliasesHi": [
+        "यहाँ रुकिए",
+        "प्रतीक्षा कीजिए"
+      ],
+      "islGloss": "",
+      "clip": {
+        "type": "none",
+        "src": ""
+      },
+      "validation": {
+        "status": "unverified",
+        "verifiedBy": "",
+        "verifiedOn": ""
+      },
+      "licence": "",
+      "attribution": "",
+      "emergency": false,
+      "order": 80,
+      "caption": ""
+    },
+    {
+      "id": "i_doctor_coming",
+      "category": "staff_instructions",
+      "speaker": "hearing_user",
+      "textEn": "The doctor is coming.",
+      "textHi": "डॉक्टर आ रहे हैं।",
+      "aliasesEn": [
+        "the doctor will be here soon",
+        "doctor is on the way",
+        "the doctor will see you soon"
+      ],
+      "aliasesHi": [
+        "डॉक्टर आ रहे हैं",
+        "डॉक्टर आ रहे हैं अभी"
+      ],
+      "islGloss": "",
+      "clip": {
+        "type": "none",
+        "src": ""
+      },
+      "validation": {
+        "status": "unverified",
+        "verifiedBy": "",
+        "verifiedOn": ""
+      },
+      "licence": "",
+      "attribution": "",
+      "emergency": false,
+      "order": 90,
+      "caption": ""
+    },
+    {
+      "id": "i_injection",
+      "category": "staff_instructions",
+      "speaker": "hearing_user",
+      "textEn": "I will give you an injection.",
+      "textHi": "मैं आपको इंजेक्शन दूँगा।",
+      "aliasesEn": [
+        "i am going to give you an injection",
+        "you need an injection",
+        "i will give you a shot"
+      ],
+      "aliasesHi": [
+        "इंजेक्शन लगाऊँगा",
+        "आपको इंजेक्शन देना है"
+      ],
+      "islGloss": "",
+      "clip": {
+        "type": "none",
+        "src": ""
+      },
+      "validation": {
+        "status": "unverified",
+        "verifiedBy": "",
+        "verifiedOn": ""
+      },
+      "licence": "",
+      "attribution": "",
+      "emergency": false,
+      "order": 100,
+      "caption": ""
+    },
+    {
+      "id": "p_deaf",
+      "category": "help",
+      "speaker": "deaf_user",
+      "textEn": "I am deaf.",
+      "textHi": "मैं बधिर हूँ।",
+      "aliasesEn": [
+        "i am deaf",
+        "im deaf",
+        "i cannot hear",
+        "i can not hear you"
+      ],
+      "aliasesHi": [
+        "मैं बधिर हूँ",
+        "मैं सुन नहीं सकता"
+      ],
+      "islGloss": "",
+      "clip": {
+        "type": "none",
+        "src": ""
+      },
+      "validation": {
+        "status": "unverified",
+        "verifiedBy": "",
+        "verifiedOn": ""
+      },
+      "licence": "",
+      "attribution": "",
+      "emergency": false,
+      "order": 10,
+      "caption": ""
+    },
+    {
+      "id": "p_use_isl",
+      "category": "help",
+      "speaker": "deaf_user",
+      "textEn": "I use Indian Sign Language.",
+      "textHi": "मैं भारतीय सांकेतिक भाषा का उपयोग करता हूँ।",
+      "aliasesEn": [
+        "i use indian sign language",
+        "i use isl",
+        "i know indian sign language",
+        "i speak indian sign language"
+      ],
+      "aliasesHi": [
+        "मैं सांकेतिक भाषा जानता हूँ",
+        "मैं भारतीय सांकेतिक भाषा बोलता हूँ"
+      ],
+      "islGloss": "",
+      "clip": {
+        "type": "none",
+        "src": ""
+      },
+      "validation": {
+        "status": "unverified",
+        "verifiedBy": "",
+        "verifiedOn": ""
+      },
+      "licence": "",
+      "attribution": "",
+      "emergency": false,
+      "order": 20,
+      "caption": ""
+    },
+    {
+      "id": "p_interpreter",
+      "category": "help",
+      "speaker": "deaf_user",
+      "textEn": "I need an interpreter.",
+      "textHi": "मुझे दुभाषिए की आवश्यकता है।",
+      "aliasesEn": [
+        "i need an interpreter",
+        "can i have an interpreter",
+        "please get an interpreter",
+        "i need a sign language interpreter"
+      ],
+      "aliasesHi": [
+        "मुझे दुभाषिया चाहिए",
+        "दुभाषिए की जरूरत है"
+      ],
+      "islGloss": "",
+      "clip": {
+        "type": "none",
+        "src": ""
+      },
+      "validation": {
+        "status": "unverified",
+        "verifiedBy": "",
+        "verifiedOn": ""
+      },
+      "licence": "",
+      "attribution": "",
+      "emergency": false,
+      "order": 30,
+      "caption": ""
+    },
+    {
+      "id": "p_call_family",
+      "category": "help",
+      "speaker": "deaf_user",
+      "textEn": "Please call my family.",
+      "textHi": "कृपया मेरे परिवार को बुलाइए।",
+      "aliasesEn": [
+        "call my family",
+        "please call my family",
+        "i want to call my family",
+        "contact my family"
+      ],
+      "aliasesHi": [
+        "मेरे परिवार को बुलाइए",
+        "परिवार को फोन कीजिए"
+      ],
+      "islGloss": "",
+      "clip": {
+        "type": "none",
+        "src": ""
+      },
+      "validation": {
+        "status": "unverified",
+        "verifiedBy": "",
+        "verifiedOn": ""
+      },
+      "licence": "",
+      "attribution": "",
+      "emergency": true,
+      "order": 40,
+      "caption": ""
+    },
+    {
+      "id": "p_help",
+      "category": "help",
+      "speaker": "deaf_user",
+      "textEn": "I need help.",
+      "textHi": "मुझे मदद चाहिए।",
+      "aliasesEn": [
+        "help me",
+        "i need help",
+        "please help me",
+        "help"
+      ],
+      "aliasesHi": [
+        "मदद कीजिए",
+        "मुझे मदद चाहिए"
+      ],
+      "islGloss": "",
+      "clip": {
+        "type": "none",
+        "src": ""
+      },
+      "validation": {
+        "status": "unverified",
+        "verifiedBy": "",
+        "verifiedOn": ""
+      },
+      "licence": "",
+      "attribution": "",
+      "emergency": true,
+      "order": 50,
+      "caption": ""
+    },
+    {
+      "id": "p_write_down",
+      "category": "help",
+      "speaker": "deaf_user",
+      "textEn": "Please write it down.",
+      "textHi": "कृपया यह लिख दीजिए।",
+      "aliasesEn": [
+        "please write it down",
+        "write it down",
+        "can you write it",
+        "please write that down"
+      ],
+      "aliasesHi": [
+        "लिख दीजिए",
+        "कृपया लिखें"
+      ],
+      "islGloss": "",
+      "clip": {
+        "type": "none",
+        "src": ""
+      },
+      "validation": {
+        "status": "unverified",
+        "verifiedBy": "",
+        "verifiedOn": ""
+      },
+      "licence": "",
+      "attribution": "",
+      "emergency": false,
+      "order": 60,
+      "caption": ""
+    },
+    {
+      "id": "p_speak_slowly",
+      "category": "help",
+      "speaker": "deaf_user",
+      "textEn": "Please speak slowly and clearly.",
+      "textHi": "कृपया धीरे और स्पष्ट बोलिए।",
+      "aliasesEn": [
+        "please speak slowly",
+        "speak slowly please",
+        "can you speak more slowly",
+        "please talk slowly"
+      ],
+      "aliasesHi": [
+        "धीरे बोलिए",
+        "कृपया धीरे बोलिए"
+      ],
+      "islGloss": "",
+      "clip": {
+        "type": "none",
+        "src": ""
+      },
+      "validation": {
+        "status": "unverified",
+        "verifiedBy": "",
+        "verifiedOn": ""
+      },
+      "licence": "",
+      "attribution": "",
+      "emergency": false,
+      "order": 70,
+      "caption": ""
+    },
+    {
+      "id": "p_dont_understand",
+      "category": "help",
+      "speaker": "deaf_user",
+      "textEn": "I do not understand.",
+      "textHi": "मुझे समझ नहीं आया।",
+      "aliasesEn": [
+        "i do not understand",
+        "i dont understand",
+        "i did not understand",
+        "i dont get it",
+        "i do not follow"
+      ],
+      "aliasesHi": [
+        "मुझे समझ नहीं आया",
+        "समझ नहीं आया"
+      ],
+      "islGloss": "",
+      "clip": {
+        "type": "none",
+        "src": ""
+      },
+      "validation": {
+        "status": "unverified",
+        "verifiedBy": "",
+        "verifiedOn": ""
+      },
+      "licence": "",
+      "attribution": "",
+      "emergency": false,
+      "order": 80,
+      "caption": ""
+    },
+    {
+      "id": "p_pain_here",
+      "category": "pain",
+      "speaker": "deaf_user",
+      "textEn": "I have pain here.",
+      "textHi": "मुझे यहाँ दर्द है।",
+      "aliasesEn": [
+        "i have pain here",
+        "it hurts here",
+        "the pain is here",
+        "pain here"
+      ],
+      "aliasesHi": [
+        "यहाँ दर्द है",
+        "यहाँ दर्द हो रहा है"
+      ],
+      "islGloss": "",
+      "clip": {
+        "type": "none",
+        "src": ""
+      },
+      "validation": {
+        "status": "unverified",
+        "verifiedBy": "",
+        "verifiedOn": ""
+      },
+      "licence": "",
+      "attribution": "",
+      "emergency": true,
+      "order": 10,
+      "caption": ""
+    },
+    {
+      "id": "p_hurts_a_lot",
+      "category": "pain",
+      "speaker": "deaf_user",
+      "textEn": "It hurts a lot.",
+      "textHi": "बहुत दर्द हो रहा है।",
+      "aliasesEn": [
+        "it hurts a lot",
+        "the pain is severe",
+        "very painful",
+        "it is very painful"
+      ],
+      "aliasesHi": [
+        "बहुत दर्द है",
+        "बहुत तकलीफ है"
+      ],
+      "islGloss": "",
+      "clip": {
+        "type": "none",
+        "src": ""
+      },
+      "validation": {
+        "status": "unverified",
+        "verifiedBy": "",
+        "verifiedOn": ""
+      },
+      "licence": "",
+      "attribution": "",
+      "emergency": false,
+      "order": 20,
+      "caption": ""
+    },
+    {
+      "id": "p_chest_pain",
+      "category": "pain",
+      "speaker": "deaf_user",
+      "textEn": "I have chest pain.",
+      "textHi": "मुझे सीने में दर्द है।",
+      "aliasesEn": [
+        "chest pain",
+        "my chest hurts",
+        "i have pain in my chest",
+        "pain in the chest"
+      ],
+      "aliasesHi": [
+        "सीने में दर्द है",
+        "छाती में दर्द"
+      ],
+      "islGloss": "",
+      "clip": {
+        "type": "none",
+        "src": ""
+      },
+      "validation": {
+        "status": "unverified",
+        "verifiedBy": "",
+        "verifiedOn": ""
+      },
+      "licence": "",
+      "attribution": "",
+      "emergency": false,
+      "order": 30,
+      "caption": ""
+    },
+    {
+      "id": "p_head_pain",
+      "category": "pain",
+      "speaker": "deaf_user",
+      "textEn": "I have a headache.",
+      "textHi": "मेरे सिर में दर्द है।",
+      "aliasesEn": [
+        "i have a headache",
+        "my head hurts",
+        "head pain",
+        "i have head pain"
+      ],
+      "aliasesHi": [
+        "सिर में दर्द है",
+        "सिरदर्द है"
+      ],
+      "islGloss": "",
+      "clip": {
+        "type": "none",
+        "src": ""
+      },
+      "validation": {
+        "status": "unverified",
+        "verifiedBy": "",
+        "verifiedOn": ""
+      },
+      "licence": "",
+      "attribution": "",
+      "emergency": false,
+      "order": 40,
+      "caption": ""
+    },
+    {
+      "id": "p_stomach_pain",
+      "category": "pain",
+      "speaker": "deaf_user",
+      "textEn": "I have stomach pain.",
+      "textHi": "मेरे पेट में दर्द है।",
+      "aliasesEn": [
+        "i have stomach pain",
+        "my stomach hurts",
+        "stomach pain",
+        "pain in my stomach",
+        "my tummy hurts"
+      ],
+      "aliasesHi": [
+        "पेट में दर्द है",
+        "पेट दर्द"
+      ],
+      "islGloss": "",
+      "clip": {
+        "type": "none",
+        "src": ""
+      },
+      "validation": {
+        "status": "unverified",
+        "verifiedBy": "",
+        "verifiedOn": ""
+      },
+      "licence": "",
+      "attribution": "",
+      "emergency": false,
+      "order": 50,
+      "caption": ""
+    },
+    {
+      "id": "p_back_pain",
+      "category": "pain",
+      "speaker": "deaf_user",
+      "textEn": "I have back pain.",
+      "textHi": "मेरी पीठ में दर्द है।",
+      "aliasesEn": [
+        "i have back pain",
+        "my back hurts",
+        "back pain",
+        "pain in my back"
+      ],
+      "aliasesHi": [
+        "पीठ में दर्द है",
+        "कमर में दर्द"
+      ],
+      "islGloss": "",
+      "clip": {
+        "type": "none",
+        "src": ""
+      },
+      "validation": {
+        "status": "unverified",
+        "verifiedBy": "",
+        "verifiedOn": ""
+      },
+      "licence": "",
+      "attribution": "",
+      "emergency": false,
+      "order": 60,
+      "caption": ""
+    },
+    {
+      "id": "p_cannot_breathe",
+      "category": "symptoms",
+      "speaker": "deaf_user",
+      "textEn": "I cannot breathe well.",
+      "textHi": "मुझे ठीक से साँस नहीं आ रही।",
+      "aliasesEn": [
+        "i cannot breathe well",
+        "i cant breathe",
+        "i am having difficulty breathing",
+        "it is hard to breathe",
+        "i cannot breathe properly"
+      ],
+      "aliasesHi": [
+        "साँस नहीं आ रही",
+        "सांस लेने में तकलीफ"
+      ],
+      "islGloss": "",
+      "clip": {
+        "type": "none",
+        "src": ""
+      },
+      "validation": {
+        "status": "unverified",
+        "verifiedBy": "",
+        "verifiedOn": ""
+      },
+      "licence": "",
+      "attribution": "",
+      "emergency": true,
+      "order": 10,
+      "caption": ""
+    },
+    {
+      "id": "p_dizzy",
+      "category": "symptoms",
+      "speaker": "deaf_user",
+      "textEn": "I feel dizzy.",
+      "textHi": "मुझे चक्कर आ रहे हैं।",
+      "aliasesEn": [
+        "i feel dizzy",
+        "i am dizzy",
+        "i feel faint",
+        "the room is spinning"
+      ],
+      "aliasesHi": [
+        "चक्कर आ रहे हैं",
+        "सिर घूम रहा है"
+      ],
+      "islGloss": "",
+      "clip": {
+        "type": "none",
+        "src": ""
+      },
+      "validation": {
+        "status": "unverified",
+        "verifiedBy": "",
+        "verifiedOn": ""
+      },
+      "licence": "",
+      "attribution": "",
+      "emergency": false,
+      "order": 20,
+      "caption": ""
+    },
+    {
+      "id": "p_fever",
+      "category": "symptoms",
+      "speaker": "deaf_user",
+      "textEn": "I have a fever.",
+      "textHi": "मुझे बुखार है।",
+      "aliasesEn": [
+        "i have a fever",
+        "i have fever",
+        "i feel feverish",
+        "my body is hot"
+      ],
+      "aliasesHi": [
+        "मुझे बुखार है",
+        "बुखार है"
+      ],
+      "islGloss": "",
+      "clip": {
+        "type": "none",
+        "src": ""
+      },
+      "validation": {
+        "status": "unverified",
+        "verifiedBy": "",
+        "verifiedOn": ""
+      },
+      "licence": "",
+      "attribution": "",
+      "emergency": false,
+      "order": 30,
+      "caption": ""
+    },
+    {
+      "id": "p_vomit",
+      "category": "symptoms",
+      "speaker": "deaf_user",
+      "textEn": "I feel like vomiting.",
+      "textHi": "मुझे उल्टी जैसा लग रहा है।",
+      "aliasesEn": [
+        "i feel like vomiting",
+        "i want to vomit",
+        "i feel sick",
+        "i am nauseous",
+        "i feel like throwing up"
+      ],
+      "aliasesHi": [
+        "उल्टी जैसा लग रहा है",
+        "जी मिचला रहा है"
+      ],
+      "islGloss": "",
+      "clip": {
+        "type": "none",
+        "src": ""
+      },
+      "validation": {
+        "status": "unverified",
+        "verifiedBy": "",
+        "verifiedOn": ""
+      },
+      "licence": "",
+      "attribution": "",
+      "emergency": false,
+      "order": 40,
+      "caption": ""
+    },
+    {
+      "id": "p_bleeding",
+      "category": "symptoms",
+      "speaker": "deaf_user",
+      "textEn": "I am bleeding.",
+      "textHi": "मुझसे खून बह रहा है।",
+      "aliasesEn": [
+        "i am bleeding",
+        "there is blood",
+        "i have bleeding",
+        "i am losing blood"
+      ],
+      "aliasesHi": [
+        "खून बह रहा है",
+        "खून निकल रहा है"
+      ],
+      "islGloss": "",
+      "clip": {
+        "type": "none",
+        "src": ""
+      },
+      "validation": {
+        "status": "unverified",
+        "verifiedBy": "",
+        "verifiedOn": ""
+      },
+      "licence": "",
+      "attribution": "",
+      "emergency": false,
+      "order": 50,
+      "caption": ""
+    },
+    {
+      "id": "p_water",
+      "category": "needs",
+      "speaker": "deaf_user",
+      "textEn": "I need water.",
+      "textHi": "मुझे पानी चाहिए।",
+      "aliasesEn": [
+        "i need water",
+        "can i have water",
+        "please give me water",
+        "i am thirsty",
+        "water please"
+      ],
+      "aliasesHi": [
+        "मुझे पानी चाहिए",
+        "पानी दीजिए"
+      ],
+      "islGloss": "",
+      "clip": {
+        "type": "none",
+        "src": ""
+      },
+      "validation": {
+        "status": "unverified",
+        "verifiedBy": "",
+        "verifiedOn": ""
+      },
+      "licence": "",
+      "attribution": "",
+      "emergency": false,
+      "order": 10,
+      "caption": ""
+    },
+    {
+      "id": "p_toilet",
+      "category": "needs",
+      "speaker": "deaf_user",
+      "textEn": "I need the toilet.",
+      "textHi": "मुझे शौचालय जाना है।",
+      "aliasesEn": [
+        "i need the toilet",
+        "i need to use the toilet",
+        "where is the toilet",
+        "i need the bathroom",
+        "i need to go to the toilet"
+      ],
+      "aliasesHi": [
+        "मुझे शौचालय जाना है",
+        "बाथरूम कहाँ है"
+      ],
+      "islGloss": "",
+      "clip": {
+        "type": "none",
+        "src": ""
+      },
+      "validation": {
+        "status": "unverified",
+        "verifiedBy": "",
+        "verifiedOn": ""
+      },
+      "licence": "",
+      "attribution": "",
+      "emergency": true,
+      "order": 20,
+      "caption": ""
+    },
+    {
+      "id": "p_medicine",
+      "category": "needs",
+      "speaker": "deaf_user",
+      "textEn": "I need my medicine.",
+      "textHi": "मुझे अपनी दवा चाहिए।",
+      "aliasesEn": [
+        "i need my medicine",
+        "i need my tablets",
+        "please give me my medicine",
+        "where is my medicine"
+      ],
+      "aliasesHi": [
+        "मुझे दवा चाहिए",
+        "मेरी दवा कहाँ है"
+      ],
+      "islGloss": "",
+      "clip": {
+        "type": "none",
+        "src": ""
+      },
+      "validation": {
+        "status": "unverified",
+        "verifiedBy": "",
+        "verifiedOn": ""
+      },
+      "licence": "",
+      "attribution": "",
+      "emergency": false,
+      "order": 30,
+      "caption": ""
+    },
+    {
+      "id": "p_food",
+      "category": "needs",
+      "speaker": "deaf_user",
+      "textEn": "I need food.",
+      "textHi": "मुझे खाना चाहिए।",
+      "aliasesEn": [
+        "i need food",
+        "i am hungry",
+        "can i have something to eat",
+        "food please"
+      ],
+      "aliasesHi": [
+        "मुझे खाना चाहिए",
+        "भूख लगी है"
+      ],
+      "islGloss": "",
+      "clip": {
+        "type": "none",
+        "src": ""
+      },
+      "validation": {
+        "status": "unverified",
+        "verifiedBy": "",
+        "verifiedOn": ""
+      },
+      "licence": "",
+      "attribution": "",
+      "emergency": false,
+      "order": 40,
+      "caption": ""
+    },
+    {
+      "id": "p_blanket",
+      "category": "needs",
+      "speaker": "deaf_user",
+      "textEn": "I need a blanket.",
+      "textHi": "मुझे कंबल चाहिए।",
+      "aliasesEn": [
+        "i need a blanket",
+        "i am cold",
+        "can i have a blanket",
+        "i need a sheet"
+      ],
+      "aliasesHi": [
+        "मुझे कंबल चाहिए",
+        "मुझे ठंड लग रही है"
+      ],
+      "islGloss": "",
+      "clip": {
+        "type": "none",
+        "src": ""
+      },
+      "validation": {
+        "status": "unverified",
+        "verifiedBy": "",
+        "verifiedOn": ""
+      },
+      "licence": "",
+      "attribution": "",
+      "emergency": false,
+      "order": 50,
+      "caption": ""
+    },
+    {
+      "id": "p_doctor",
+      "category": "needs",
+      "speaker": "deaf_user",
+      "textEn": "I need a doctor.",
+      "textHi": "मुझे डॉक्टर चाहिए।",
+      "aliasesEn": [
+        "i need a doctor",
+        "call a doctor",
+        "please get a doctor",
+        "i want to see a doctor"
+      ],
+      "aliasesHi": [
+        "मुझे डॉक्टर चाहिए",
+        "डॉक्टर को बुलाइए"
+      ],
+      "islGloss": "",
+      "clip": {
+        "type": "none",
+        "src": ""
+      },
+      "validation": {
+        "status": "unverified",
+        "verifiedBy": "",
+        "verifiedOn": ""
+      },
+      "licence": "",
+      "attribution": "",
+      "emergency": true,
+      "order": 60,
+      "caption": ""
+    },
+    {
+      "id": "a_yes",
+      "category": "answers",
+      "speaker": "both",
+      "textEn": "Yes.",
+      "textHi": "हाँ।",
+      "aliasesEn": [
+        "yes",
+        "yeah",
+        "yep",
+        "correct",
+        "that is right"
+      ],
+      "aliasesHi": [
+        "हाँ",
+        "हां",
+        "जी हाँ"
+      ],
+      "islGloss": "",
+      "clip": {
+        "type": "none",
+        "src": ""
+      },
+      "validation": {
+        "status": "unverified",
+        "verifiedBy": "",
+        "verifiedOn": ""
+      },
+      "licence": "",
+      "attribution": "",
+      "emergency": true,
+      "order": 10,
+      "caption": ""
+    },
+    {
+      "id": "a_no",
+      "category": "answers",
+      "speaker": "both",
+      "textEn": "No.",
+      "textHi": "नहीं।",
+      "aliasesEn": [
+        "no",
+        "nope",
+        "not at all",
+        "that is not right"
+      ],
+      "aliasesHi": [
+        "नहीं",
+        "ना",
+        "जी नहीं"
+      ],
+      "islGloss": "",
+      "clip": {
+        "type": "none",
+        "src": ""
+      },
+      "validation": {
+        "status": "unverified",
+        "verifiedBy": "",
+        "verifiedOn": ""
+      },
+      "licence": "",
+      "attribution": "",
+      "emergency": true,
+      "order": 20,
+      "caption": ""
+    },
+    {
+      "id": "a_dont_know",
+      "category": "answers",
+      "speaker": "both",
+      "textEn": "I don't know.",
+      "textHi": "मुझे नहीं पता।",
+      "aliasesEn": [
+        "i do not know",
+        "i dont know",
+        "not sure",
+        "i am not sure"
+      ],
+      "aliasesHi": [
+        "मुझे नहीं पता",
+        "पता नहीं"
+      ],
+      "islGloss": "",
+      "clip": {
+        "type": "none",
+        "src": ""
+      },
+      "validation": {
+        "status": "unverified",
+        "verifiedBy": "",
+        "verifiedOn": ""
+      },
+      "licence": "",
+      "attribution": "",
+      "emergency": false,
+      "order": 30,
+      "caption": ""
+    },
+    {
+      "id": "a_thank_you",
+      "category": "answers",
+      "speaker": "both",
+      "textEn": "Thank you.",
+      "textHi": "धन्यवाद।",
+      "aliasesEn": [
+        "thank you",
+        "thanks",
+        "thank you very much"
+      ],
+      "aliasesHi": [
+        "धन्यवाद",
+        "शुक्रिया"
+      ],
+      "islGloss": "",
+      "clip": {
+        "type": "none",
+        "src": ""
+      },
+      "validation": {
+        "status": "unverified",
+        "verifiedBy": "",
+        "verifiedOn": ""
+      },
+      "licence": "",
+      "attribution": "",
+      "emergency": false,
+      "order": 40,
+      "caption": ""
+    }
+  ]
+}

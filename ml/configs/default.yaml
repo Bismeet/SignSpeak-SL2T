@@ -1,0 +1,60 @@
+# SignSpeak training configuration — the real run.
+#
+# Use this once you have collected consented landmark data from at least six ISL signers
+# (docs/ai-ml-and-dataset-plan.md §2). Run it with:
+#
+#   npm run ml:train
+#
+# Nothing in this file is a placeholder: every value is what the pipeline actually uses.
+
+run:
+  # Written into the model card and used to name the artefact directory.
+  model_version: sign-clf-v1
+  # Where collected samples live. Every *.json under here is read; each file may be a
+  # single object with a "samples" array (what the app exports) or a bare array.
+  data_dir: ml/data
+  # Where the model, card and reports are written.
+  artifact_dir: ml/artifacts
+  # Also copy the exported model into public/models so the web app can load it.
+  stage_for_browser: true
+
+data:
+  # Learner recordings are excluded by default (risk R20): a hearing team member's
+  # approximation of a sign would teach the model the wrong form. Set true only for a
+  # deliberate robustness experiment, never for a release model.
+  include_learners: false
+  # Gloss used for the explicit negative class. Samples with this label are the
+  # "not one of our signs" examples.
+  negative_class: OTHER
+  # Only these glosses become classes. Anything else is skipped with a warning, so a
+  # typo cannot silently create a class the browser does not know how to label.
+  vocabulary_source: data/sign-vocabulary.json
+
+split:
+  # Whole signers held out for the headline metric. 2 means ~2 people the model has
+  # never seen, which is the only number worth reporting.
+  test_signer_count: 2
+  seed: 20260101
+  # Leave-one-signer-out cross-validation over every signer, for the mean macro F1.
+  run_loso: true
+
+training:
+  # Empty list means "try every exportable candidate and keep the best". Naming a single
+  # algorithm skips the comparison and is useful when iterating.
+  algorithms: []
+  seed: 20260101
+
+decision:
+  # Thresholds baked into the model card and used to compute FAR/FRR. These are the same
+  # numbers the browser applies in lib/vision/decision.ts (Normal confidence mode).
+  confidence_threshold: 0.7
+  margin_threshold: 0.2
+  min_hand_score: 0.5
+  window_size: 5
+  required_votes: 3
+
+reporting:
+  # Print the full per-class table and confusion matrix to stdout.
+  verbose: true
+  # Write a machine-readable run report next to the model.
+  write_json_report: true

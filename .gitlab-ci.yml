@@ -1,0 +1,181 @@
+# GitLab CI for SignSpeak.
+#
+# Mirrors `npm run verify` (typecheck + lint + data validation + tests + build) and adds a
+# Python job that exercises the ML pipeline. Deployment to GitLab Pages is included but
+# gated behind a manual trigger on the default branch, because publishing this app is a
+# decision someone should make deliberately — it is a communication aid for patients, and
+# an unreviewed deploy is not the same thing as a passing pipeline.
+#
+# The ML job deliberately runs the SMOKE configuration, not the real one. There is no
+# collected ISL data in the repository (see ml/data/README.md), so a "real" training job
+# would have nothing to train on. The smoke job proves the pipeline imports, trains,
+# evaluates, exports to ONNX, and verifies the export against scikit-learn. It asserts the
+# artefact is marked notForRealUse, so a synthetic model can never be mistaken for a real one.
+
+stages:
+  - verify
+  - test
+  - build
+  - ml
+  - deploy
+
+default:
+  interruptible: true
+
+variables:
+  # Keep npm and pip quiet and deterministic in CI.
+  npm_config_fund: 'false'
+  npm_config_audit: 'false'
+  PIP_DISABLE_PIP_VERSION_CHECK: '1'
+
+.node:
+  image: node:20.9
+  cache:
+    key:
+      files:
+        - package-lock.json
+    paths:
+      - .npm/
+  before_script:
+    # `--ignore-scripts` skips the postinstall asset download: the lint/typecheck/test jobs
+    # do not need the 13 MB MediaPipe models, and downloading them in every job would be
+    # slow and flaky. The build job runs the real install.
+    - npm ci --cache .npm --prefer-offline --ignore-scripts
+
+# ---------------------------------------------------------------------------------------
+# verify
+# ---------------------------------------------------------------------------------------
+
+typecheck:
+  extends: .node
+  stage: verify
+  script:
+    - npm run typecheck
+
+lint:
+  extends: .node
+  stage: verify
+  script:
+    - npm run lint
+
+# The phrase and clip data files are hand-edited, so they are validated on every push by a
+# separate implementation from the one the app uses at runtime. A verified phrase without a
+# clip, or a clip without a licence, fails the pipeline rather than reaching a patient.
+validate-data:
+  extends: .node
+  stage: verify
+  script:
+    - npm run validate
+
+# ---------------------------------------------------------------------------------------
+# test
+# ---------------------------------------------------------------------------------------
+
+unit-tests:
+  extends: .node
+  stage: test
+  script:
+    - npm test
+  artifacts:
+    when: always
+    expire_in: 1 week
+    paths:
+      - tests/fixtures/features-parity.json
+
+# ---------------------------------------------------------------------------------------
+# build
+# ---------------------------------------------------------------------------------------
+
+build:
+  extends: .node
+  stage: build
+  script:
+    # Full install, including the postinstall asset download, because the static export
+    # must contain the self-hosted WASM runtimes and MediaPipe models.
+    - npm ci --cache .npm --prefer-offline
+    - npm run build
+    # A build that silently lost its runtime assets would still "succeed", so assert that
+    # the pieces the app cannot work without are actually present in the export.
+    - test -d out/ort || { echo "out/ort is missing: the ONNX runtime was not staged"; exit 1; }
+    - test -d out/mediapipe || { echo "out/mediapipe is missing: MediaPipe was not staged"; exit 1; }
+    - test -f out/models/hand_landmarker.task || { echo "hand_landmarker.task is missing"; exit 1; }
+    - test -f out/models/pose_landmarker_lite.task || { echo "pose_landmarker_lite.task is missing"; exit 1; }
+    - test -f out/_headers || { echo "out/_headers is missing"; exit 1; }
+    - test -f out/emergency/index.html || { echo "the Emergency screen was not exported"; exit 1; }
+  artifacts:
+    expire_in: 1 week
+    paths:
+      - out/
+
+# ---------------------------------------------------------------------------------------
+# ml
+# ---------------------------------------------------------------------------------------
+
+# Proves the training pipeline works end to end without any real data: dataset assembly,
+# quality assessment, held-out-signer split, candidate training, leave-one-signer-out
+# cross-validation, ONNX export, and verification of the exported graph against
+# scikit-learn. Python 3.12 is pinned because scikit-learn 1.4.2 and numpy 1.26.4 publish
+# no 3.13 wheels (see ml/requirements.txt).
+ml-pipeline-smoke:
+  stage: ml
+  image: python:3.12-slim
+  script:
+    - python -m venv ml/.venv
+    - ml/.venv/bin/python -m pip install --upgrade pip
+    - ml/.venv/bin/python -m pip install -r ml/requirements.txt
+    # Feature parity is the contract between the browser and the trainer; if it breaks,
+    # every model ever trained is invalid. Regenerating and re-testing here catches a
+    # Python-side change that the Node job would not.
+    - ml/.venv/bin/python ml/scripts/build_fixtures.py
+    - ml/.venv/bin/python ml/scripts/build_replay_fixtures.py
+    - ml/.venv/bin/python ml/scripts/train.py --config ml/configs/smoke-test.yaml
+    # The smoke artefact must be honest about what it is. If this ever reports false, the
+    # pipeline has started claiming a synthetic model is usable.
+    - |
+      python - <<'PY'
+      import json, sys
+      card = json.load(open('ml/artifacts/smoke/model-card.json', encoding='utf-8'))
+      problems = []
+      if card.get('notForRealUse') is not True:
+          problems.append('smoke model is not marked notForRealUse')
+      if card.get('featureVersion') != 'ss-features-v1':
+          problems.append(f"unexpected featureVersion {card.get('featureVersion')!r}")
+      if card.get('inputDim') != 159:
+          problems.append(f"unexpected inputDim {card.get('inputDim')!r}")
+      if not card.get('limitations'):
+          problems.append('model card has no limitations')
+      if problems:
+          print('MODEL CARD CHECK FAILED:')
+          for p in problems:
+              print('  -', p)
+          sys.exit(1)
+      print('model card check passed:', card['modelVersion'], '| notForRealUse =', card['notForRealUse'])
+      PY
+  artifacts:
+    when: always
+    expire_in: 1 week
+    paths:
+      - ml/artifacts/smoke/
+      - tests/fixtures/features-parity.json
+
+# ---------------------------------------------------------------------------------------
+# deploy
+# ---------------------------------------------------------------------------------------
+
+# GitLab Pages. Manual, so publishing is a decision rather than a side effect of pushing.
+# `out/` is already the fully static site produced by `npm run build`.
+pages:
+  stage: deploy
+  image: alpine:latest
+  needs:
+    - job: build
+      artifacts: true
+  script:
+    - mv out public
+  artifacts:
+    paths:
+      - public
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+      when: manual
+      allow_failure: false

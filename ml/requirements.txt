@@ -1,0 +1,32 @@
+# SignSpeak training pipeline — Python dependencies.
+#
+# This file is ONLY needed to train a sign-recognition model. The web application
+# itself does not use Python at all: it loads a pre-exported ONNX model in the browser
+# with onnxruntime-web. If you never train a model, you never need this file.
+#
+# Install with:
+#   python -m venv ml/.venv
+#   ml/.venv/Scripts/python -m pip install -r ml/requirements.txt      # Windows
+#   ml/.venv/bin/python   -m pip install -r ml/requirements.txt        # macOS / Linux
+#
+# Pinned to versions that were verified to install together. numpy<2 is deliberate:
+# scikit-learn 1.4.x and skl2onnx were built against the numpy 1.x ABI.
+#
+# protobuf<5 is also deliberate and is NOT optional. protobuf 5+ validates repeated
+# int64 fields strictly and rejects Python bools, but skl2onnx 1.17.0 emits
+# `nodes_missing_value_tracks_true` as a list of bools. With protobuf 5+ every tree
+# ensemble (random forest, gradient boosting) fails to export with:
+#     TypeError: Field onnx.AttributeProto.ints: Expected an int, got a boolean.
+# 4.25.3 is the last 4.x release and works with onnx 1.16.1. protobuf is only used by
+# the ONNX exporter, so this pin does not affect the browser runtime.
+
+numpy==1.26.4
+scipy==1.13.1
+pandas==2.2.2
+scikit-learn==1.4.2
+joblib==1.4.2
+PyYAML==6.0.1
+protobuf==4.25.3
+onnx==1.16.1
+onnxruntime==1.18.1
+skl2onnx==1.17.0

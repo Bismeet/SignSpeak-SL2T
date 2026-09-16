@@ -1,0 +1,51 @@
+{
+  "schemaVersion": 1,
+  "generator": "ml/scripts/build_replay_fixtures.py",
+  "source": "synthetic-generator",
+  "notForRealUse": true,
+  "notice": "Procedurally generated hand and pose landmarks. These are NOT recordings of anyone signing and have no relationship to Indian Sign Language. They exist only so the recognition pipeline can be demonstrated and tested without a camera. Never present these as sign recognition.",
+  "fixtures": [
+    {
+      "file": "synth_a.json",
+      "label": "SYNTH_A",
+      "notForRealUse": true,
+      "frameCount": 90
+    },
+    {
+      "file": "synth_b.json",
+      "label": "SYNTH_B",
+      "notForRealUse": true,
+      "frameCount": 90
+    },
+    {
+      "file": "synth_c.json",
+      "label": "SYNTH_C",
+      "notForRealUse": true,
+      "frameCount": 90
+    },
+    {
+      "file": "synth_d.json",
+      "label": "SYNTH_D",
+      "notForRealUse": true,
+      "frameCount": 90
+    },
+    {
+      "file": "synth_e.json",
+      "label": "SYNTH_E",
+      "notForRealUse": true,
+      "frameCount": 90
+    },
+    {
+      "file": "synth_f.json",
+      "label": "SYNTH_F",
+      "notForRealUse": true,
+      "frameCount": 90
+    },
+    {
+      "file": "other.json",
+      "label": "OTHER",
+      "notForRealUse": true,
+      "frameCount": 90
+    }
+  ]
+}

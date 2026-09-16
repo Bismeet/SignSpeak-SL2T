@@ -1,0 +1,59 @@
+{
+  "name": "signspeak",
+  "version": "0.1.0",
+  "private": true,
+  "description": "SignSpeak - an AI-assisted, two-way Indian Sign Language (ISL) communication aid for hospital and emergency settings.",
+  "license": "UNLICENSED",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "postinstall": "node scripts/setup-assets.mjs",
+    "setup:assets": "node scripts/setup-assets.mjs",
+    "validate:phrases": "node scripts/validate-phrases.mjs",
+    "validate:clips": "node scripts/validate-clips.mjs",
+    "validate": "npm run validate:phrases && npm run validate:clips",
+    "verify": "npm run typecheck && npm run lint && npm run validate && npm run test && npm run build",
+    "ml:setup": "node scripts/ml-setup.mjs",
+    "ml:fixtures": "node scripts/ml.mjs scripts/build_fixtures.py && node scripts/ml.mjs scripts/build_replay_fixtures.py",
+    "ml:smoke": "node scripts/ml.mjs scripts/train.py --config ml/configs/smoke-test.yaml",
+    "ml:train": "node scripts/ml.mjs scripts/train.py --config ml/configs/default.yaml",
+    "ml:eval": "node scripts/ml.mjs scripts/evaluate.py --model-dir ml/artifacts/sign-clf-v1",
+    "ml:algorithms": "node scripts/ml.mjs scripts/train.py --list-algorithms"
+  },
+  "dependencies": {
+    "@mediapipe/tasks-vision": "^0.10.20",
+    "clsx": "^2.1.1",
+    "next": "^15.1.6",
+    "onnxruntime-web": "^1.20.1",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@eslint/eslintrc": "^3.2.0",
+    "@testing-library/dom": "^10.4.0",
+    "@testing-library/jest-dom": "^6.6.3",
+    "@testing-library/react": "^16.1.0",
+    "@testing-library/user-event": "^14.5.2",
+    "@types/dom-speech-recognition": "^0.0.4",
+    "@types/node": "^22.10.5",
+    "@types/react": "^19.0.7",
+    "@types/react-dom": "^19.0.3",
+    "@vitejs/plugin-react": "^4.3.4",
+    "autoprefixer": "^10.4.20",
+    "eslint": "^9.18.0",
+    "eslint-config-next": "^15.1.6",
+    "jsdom": "^25.0.1",
+    "postcss": "^8.4.49",
+    "tailwindcss": "^3.4.17",
+    "typescript": "^5.7.3",
+    "vitest": "^2.1.8"
+  },
+  "engines": {
+    "node": ">=20.9.0"
+  }
+}
