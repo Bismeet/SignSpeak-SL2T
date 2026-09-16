@@ -40,7 +40,7 @@ npm run verify       # typecheck + lint + data validation + tests + production b
 | `npm start` | Serve the production build (server mode only) |
 | `npm run typecheck` | `tsc --noEmit` |
 | `npm run lint` | ESLint |
-| `npm test` | Vitest, 367 tests |
+| `npm test` | Vitest, 388 tests |
 | `npm run validate` | Phrase and clip data integrity |
 | `npm run verify` | Everything above, in order |
 | `npm run ml:setup` | Create the Python training environment |
@@ -139,7 +139,7 @@ lib/
 data/           phrases.json, sign-vocabulary.json
 ml/             Python training pipeline (see ml/README.md)
 scripts/        asset setup, data validators, cross-platform Python launcher
-tests/          367 tests
+tests/          388 tests
 ```
 
 ### Two contracts hold the project together
@@ -211,18 +211,26 @@ the app behind a permanent banner.
 ## Testing
 
 ```bash
-npm test          # 367 tests across 11 files
+npm test          # 388 tests across 12 files
 npm run verify    # + typecheck, lint, data validation, production build
 ```
 
 The suite covers feature extraction and parity with Python, the accept/reject decision gate,
 phrase matching and normalisation (including Devanagari combining marks), conversation state,
-model-card fail-closed behaviour, the inference backend contract, camera error mapping, and
-speech capability detection and error copy.
+model-card fail-closed behaviour, the inference backend contract, camera error mapping, device
+status wiring, and speech capability detection and error copy.
 
-**Not covered:** browser-level end-to-end tests. There is no Playwright/Cypress suite, so
-camera, MediaPipe and Web Speech behaviour is verified by unit tests and manual checks rather
-than in a real browser. This is the largest testing gap.
+**Verified in a real browser.** The export was served and driven in Chrome: every screen
+renders, the camera path was exercised with Chrome's fake media device (MediaPipe WASM,
+Hand Landmarker and Pose Landmarker all load, tracking runs at 21 FPS), and the
+model-unavailable fallback behaves correctly. That check found and fixed two defects that no
+unit test could reach — the header camera pill never left "Camera off", and the camera preview
+was permanently blank because the stream was attached before the `<video>` existed. Both now
+have regression guards.
+
+**Not covered:** an automated browser suite. There is no Playwright/Cypress suite, so camera,
+MediaPipe and Web Speech behaviour is verified by unit tests plus the manual check above rather
+than as a regression test. This is the largest testing gap.
 
 **The recognition acceptance targets in `docs/testing-and-evaluation.md` §2.2 are NOT met and
 are NOT claimed to be met**, because they require real data. `npm run ml:train` prints

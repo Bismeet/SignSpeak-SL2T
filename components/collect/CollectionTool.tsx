@@ -24,6 +24,7 @@ import { Callout } from '@/components/ui/Callout';
 import { SelectField, TextField, ToggleField } from '@/components/ui/Field';
 import { Card, Panel, SectionHeading } from '@/components/ui/Surface';
 import { EmptyState, PermissionState } from '@/components/common/PermissionState';
+import { useDeviceStatus } from '@/lib/state/device-status';
 import { SignLandmarker, isLandmarkerFailure, type LandmarkerFailure } from '@/lib/vision/landmarker';
 import { describeCameraError, startCamera, stopStream, type CameraFailure } from '@/lib/vision/camera';
 import { FEATURE_LAYOUT_DESCRIPTION, extractFeatureVector } from '@/lib/vision/features';
@@ -72,6 +73,7 @@ export function CollectionTool() {
    */
   const finishRecordingRef = useRef<() => void>(() => {});
 
+  const { setCamera } = useDeviceStatus();
   const [status, setStatus] = useState<RecorderStatus>('idle');
   const [cameraFailure, setCameraFailure] = useState<CameraFailure | null>(null);
   const [landmarkerFailure, setLandmarkerFailure] = useState<LandmarkerFailure | null>(null);
@@ -121,6 +123,23 @@ export function CollectionTool() {
     setStatus('idle');
     setLiveHands(0);
   }, []);
+
+  // Publish the recorder's camera state to the shared header pill
+  // (docs/ui-ux-specification.md §4). Without this the header claims "Camera off" while this
+  // screen is streaming, which is the one thing the pill exists to prevent.
+  useEffect(() => {
+    setCamera(
+      status === 'ready' || status === 'recording'
+        ? 'streaming'
+        : status === 'preparing'
+          ? 'requesting'
+          : status === 'error'
+            ? (cameraFailure?.status ?? 'error')
+            : 'idle',
+    );
+  }, [cameraFailure, setCamera, status]);
+
+  useEffect(() => () => setCamera('idle'), [setCamera]);
 
   const drawOverlay = useCallback((hands: Array<{ landmarks: Array<{ x: number; y: number }> }>) => {
     const canvas = overlayRef.current;

@@ -21,6 +21,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { config } from '@/lib/config';
+import { useDeviceStatus } from '@/lib/state/device-status';
 import { isLandmarkerFailure, SignLandmarker, type LandmarkerFailure } from '@/lib/vision/landmarker';
 import {
   describeCameraError,
@@ -134,6 +135,12 @@ export function useSignRecognition(
   options: UseSignRecognitionOptions = {},
 ): UseSignRecognitionResult {
   const { settings } = useSettings();
+  // The header pills must tell the truth about what is active
+  // (docs/ui-ux-specification.md §4). The camera state lives in this hook, so it has to be
+  // published to the shared device-status context — otherwise the header is stuck showing
+  // "Camera off" while the camera is streaming, which is precisely the thing a user has to
+  // be able to trust. The microphone half does the same thing in `lib/speech/use-asr.ts`.
+  const { setCamera } = useDeviceStatus();
   const { availability, ensureClassifier } = useModel();
   const onAcceptedRef = useRef(options.onAccepted);
   onAcceptedRef.current = options.onAccepted;
@@ -201,6 +208,36 @@ export function useSignRecognition(
     if (!mountedRef.current) return;
     setSnapshot((previous) => ({ ...previous, ...patch }));
   }, []);
+
+  // Mirror this hook's camera state into the shared context so the header pill matches what
+  // is actually happening, and clear it on unmount so the header cannot keep claiming a
+  // camera is on after the user has navigated away from this screen.
+  useEffect(() => {
+    setCamera(snapshot.camera);
+  }, [setCamera, snapshot.camera]);
+
+  useEffect(() => () => setCamera('idle'), [setCamera]);
+
+  /**
+   * Attach the live stream to whichever `<video>` is currently mounted.
+   *
+   * This has to be an effect keyed on the camera status, not an assignment inside `start()`.
+   * The panel only renders its preview once `camera` is 'streaming', so at the moment the
+   * stream arrives from `getUserMedia` the element does not exist yet. Assigning there would
+   * attach the stream to nothing: the preview stays blank, the tracking loop reads zero
+   * frames, and recognition can never produce a result. Re-running here means the element is
+   * guaranteed to exist by the time the status flips.
+   */
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+    const stream = streamRef.current;
+    if (!stream || video.srcObject === stream) return;
+    video.srcObject = stream;
+    void video.play().catch(() => {
+      // Autoplay can be rejected before a user gesture; the preview starts on play().
+    });
+  }, [snapshot.camera]);
 
   const drawOverlay = useCallback((frame: FrameLandmarks, video: HTMLVideoElement) => {
     const canvas = overlayCanvasRef.current;
@@ -541,15 +578,10 @@ export function useSignRecognition(
     }
 
     streamRef.current = result.stream;
-    const video = videoRef.current;
-    if (video) {
-      video.srcObject = result.stream;
-      try {
-        await video.play();
-      } catch {
-        // Autoplay can be rejected before a user gesture; the preview will start on play().
-      }
-    }
+    // The stream is attached to the <video> by the effect below, not here. `CameraPanel`
+    // renders its preview only once `camera` is 'streaming' or 'paused', and at this point
+    // it is still 'requesting' — so `videoRef.current` is null and an assignment here would
+    // silently do nothing, leaving the preview blank and the tracking loop with no frames.
 
     // Detect the camera being revoked outside the app (T-PERM-08).
     watchTrackEnded(result.track, () => {

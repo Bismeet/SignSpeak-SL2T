@@ -485,7 +485,7 @@ list is now cached per document.
 typing flow, the phrase board, permission-denied flows with fake media streams, and sign
 recognition driven by recorded landmark fixtures injected in place of the camera.
 
-**Decision.** Not implemented. 367 unit and component tests exist instead.
+**Decision.** Not implemented. 388 unit and component tests exist instead.
 
 **Why.** The E2E layer is the largest remaining gap, and it is a gap by choice: the effort was
 spent on making the pipeline correct and honest end to end, which is verifiable without a
@@ -503,8 +503,9 @@ recognition from recorded landmarks without a camera — which is what §6 asks 
 (153.0.8010.47) and the screens were reviewed: Home, Conversation, Phrases and Emergency all
 render, in the dark theme, with readable contrast. Confirmed visually:
 
-- the header shows **Camera off** and **Mic off** before any user action, so NFR-01 holds in
-  the real UI and not only in the unit test;
+- the header shows **Camera off** and **Mic off** before any user action, and `document
+  .querySelectorAll('video').length === 0` until the camera is started, so NFR-01 holds in the
+  real UI and not only in the unit test;
 - the **Emergency board is populated** with large bilingual buttons, confirming the D-21 fix
   in the rendered app rather than only in the test suite;
 - **Hindi renders correctly** — `हाँ`, `नहीं`, `मुझे मदद चाहिए।` — confirming the D-21
@@ -515,14 +516,57 @@ render, in the dark theme, with readable contrast. Confirmed visually:
 - the Phrases screen shows the "How this list is built" panel stating plainly that no phrase
   has been reviewed by a qualified ISL signer, which is the honesty requirement made visible;
 - the exported HTML has `lang="en"`, one `<h1>`, a skip link, `<main>`/`<header>`/`<nav>`,
-  ARIA labels, and no `<img>` without `alt`.
+  ARIA labels, and no `<img>` without `alt`;
+- every interactive control carries a real text label — an enumeration of the Conversation
+  screen returned 13 buttons with names such as "Start camera", "Use phrase board instead",
+  "Pause camera", "Stop camera", "Speak", "Stop", "Repeat" and "Send message". No icon-only
+  unlabelled control.
 
-This is a **manual** check, not a regression test. It closes the "has anyone ever looked at
-this?" question but does not replace the automated suite §6 asks for.
+**Camera and MediaPipe path (exercised).** Using Chrome's fake media device
+(`--use-fake-device-for-media-stream --use-fake-ui-for-media-stream`), the full input path was
+driven in the browser and confirmed from the server access log:
 
-**Not yet exercised in a browser.** The camera, MediaPipe, ONNX Runtime and Web Speech paths
-were not driven end to end, because that needs a camera device and a real microphone. Those
-remain covered by unit tests only.
+```
+GET /mediapipe/wasm/vision_wasm_internal.js    200
+GET /mediapipe/wasm/vision_wasm_internal.wasm  200   (10.6 MB)
+GET /models/hand_landmarker.task               200   (7.8 MB)
+GET /models/pose_landmarker_lite.task          200   (5.8 MB)
+```
+
+with `video.srcObject` set, `video.readyState === 4` (HAVE_ENOUGH_DATA) and the tracking loop
+reporting **21 FPS**. So: camera → live frames → MediaPipe WASM → Hand + Pose landmarkers →
+per-frame feature extraction → the accept/reject gate, all running in a real browser. Zero
+hands are detected because the fake device shows a test pattern, which correctly produces
+"Move hands into frame" and "Not recognised" rather than a guess. `/models/model-card.json`
+returns 404, and the app shows the model-unavailable copy — the designed fallback.
+
+**Two real bugs were found by doing this, and neither was reachable by the test suite.**
+
+1. **The header camera pill never left "Camera off".** `use-asr.ts` published microphone state
+   to the shared `DeviceStatus` context, but **nothing ever called `setCamera`** — the
+   recognition hook kept its camera state privately. The header pill therefore reported
+   "Camera off" while the camera was streaming, which is precisely the assurance the pill
+   exists to give (`ui-ux-specification.md` §4, quoted in the module's own docstring). Fixed by
+   publishing from `lib/vision/use-sign-recognition.ts` and `components/collect/CollectionTool.tsx`,
+   with an unmount reset so a stale "Camera on" cannot survive navigation away.
+2. **The camera preview was permanently blank, and recognition could never work.**
+   `CameraPanel` renders its `<video>` only once `camera` is `'streaming'` or `'paused'`, but
+   the hook assigned `video.srcObject` inside `start()`, while the status was still
+   `'requesting'`. `videoRef.current` was therefore `null`, the stream was attached to nothing,
+   the preview stayed white, the tracking loop read zero frames, and no prediction could ever
+   be produced. Fixed by attaching the stream in an effect keyed on the camera status, which
+   runs after the element exists.
+
+Both are covered by regression guards in `tests/device-status.test.ts`, written as source
+assertions because a behavioural test would have to render the hook against MediaPipe. That is
+weaker than a real test and is labelled as such in the file.
+
+**Not yet exercised in a browser.** The microphone / Web Speech path and a real hand in front
+of a real camera. Those remain covered by unit tests only.
+
+This is a **manual** check, not a regression test. It closed the "has anyone ever looked at
+this?" question and caught two shipping-blocking defects, but it does not replace the automated
+suite §6 asks for — which is why D-22 stays `OPEN`.
 
 ---
 
