@@ -491,13 +491,38 @@ recognition driven by recorded landmark fixtures injected in place of the camera
 spent on making the pipeline correct and honest end to end, which is verifiable without a
 browser, rather than on a browser harness that would need its own CI media plumbing. The
 documented T-* test IDs that depend on a real browser (T-PERM-01 … T-PERM-08, T-SIGN-01 … 08,
-T-SPCH-01 … 07, T-CONV-01 … 03) are therefore **unverified**, and this build does not claim
-otherwise.
+T-SPCH-01 … 07, T-CONV-01 … 03) are therefore **unverified as automated tests**, and this build
+does not claim otherwise.
 
 **Partially covered instead.** Camera error mapping, permission state copy, the decision gate,
 phrase matching, the backend contract, capability detection and voice ranking are covered by
 unit tests, and the replay fixtures in `public/fixtures/` exist so a future E2E suite can drive
 recognition from recorded landmarks without a camera — which is what §6 asks for.
+
+**Visual smoke check (performed).** The static export was served and opened in a real Chrome
+(153.0.8010.47) and the screens were reviewed: Home, Conversation, Phrases and Emergency all
+render, in the dark theme, with readable contrast. Confirmed visually:
+
+- the header shows **Camera off** and **Mic off** before any user action, so NFR-01 holds in
+  the real UI and not only in the unit test;
+- the **Emergency board is populated** with large bilingual buttons, confirming the D-21 fix
+  in the rendered app rather than only in the test suite;
+- **Hindi renders correctly** — `हाँ`, `नहीं`, `मुझे मदद चाहिए।` — confirming the D-21
+  normalisation fix did not break display;
+- the Conversation screen shows the three zones (Deaf user / Shared conversation / Hearing
+  user), the empty state, the "0 messages" and "Nothing stored or uploaded" badges, and the
+  "typing always works, even without a microphone" fallback;
+- the Phrases screen shows the "How this list is built" panel stating plainly that no phrase
+  has been reviewed by a qualified ISL signer, which is the honesty requirement made visible;
+- the exported HTML has `lang="en"`, one `<h1>`, a skip link, `<main>`/`<header>`/`<nav>`,
+  ARIA labels, and no `<img>` without `alt`.
+
+This is a **manual** check, not a regression test. It closes the "has anyone ever looked at
+this?" question but does not replace the automated suite §6 asks for.
+
+**Not yet exercised in a browser.** The camera, MediaPipe, ONNX Runtime and Web Speech paths
+were not driven end to end, because that needs a camera device and a real microphone. Those
+remain covered by unit tests only.
 
 ---
 
