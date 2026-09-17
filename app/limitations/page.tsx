@@ -14,6 +14,7 @@ import { Callout } from '@/components/ui/Callout';
 import { Icon } from '@/components/ui/Icon';
 import { Card, Panel, SectionHeading, Stack } from '@/components/ui/Surface';
 import { availabilitySummary, useModel } from '@/lib/state/model-provider';
+import { metricLabels, notForRealUseCopy } from '@/lib/model/card';
 import { PHRASE_CATEGORY_META, phraseSummary, visiblePhrases } from '@/lib/phrases/data';
 import { SIGN_VOCABULARY, signVocabularySummary } from '@/lib/signs/vocabulary';
 import { config } from '@/lib/config';
@@ -35,6 +36,10 @@ const CANNOT_DO = [
 
 export default function LimitationsPage() {
   const { availability } = useModel();
+  // Labels follow the card's own splitKind, so a group split is never presented as a
+  // signer-independent result.
+  const metricCopy =
+    availability.state === 'ready' ? metricLabels(availability.card) : null;
   const modelSummary = availabilitySummary(availability);
   const signs = signVocabularySummary();
   const phrases = phraseSummary();
@@ -68,7 +73,7 @@ export default function LimitationsPage() {
               </Badge>
               {modelSummary.detail ? <p className="text-pretty text-muted">{modelSummary.detail}</p> : null}
 
-              {availability.state === 'ready' ? (
+              {availability.state === 'ready' && metricCopy ? (
                 <div className="space-y-4">
                   <dl className="grid gap-x-6 gap-y-2 rounded-2xl bg-raised p-4 text-sm sm:grid-cols-2">
                     <div className="flex gap-2">
@@ -80,11 +85,11 @@ export default function LimitationsPage() {
                       <dd>{availability.card.dataset.sampleCount} samples</dd>
                     </div>
                     <div className="flex gap-2">
-                      <dt className="font-semibold text-muted">Signers</dt>
+                      <dt className="font-semibold text-muted">{metricCopy.count}</dt>
                       <dd>{availability.card.dataset.signerCount}</dd>
                     </div>
                     <div className="flex gap-2">
-                      <dt className="font-semibold text-muted">Held-out-signer macro F1</dt>
+                      <dt className="font-semibold text-muted">{metricCopy.macroF1}</dt>
                       <dd>
                         {availability.card.metrics?.heldOutSignerMacroF1 === null ||
                         availability.card.metrics?.heldOutSignerMacroF1 === undefined
@@ -94,10 +99,24 @@ export default function LimitationsPage() {
                     </div>
                   </dl>
 
+                  {metricCopy.countNote ? (
+                    <p className="text-sm text-muted">{metricCopy.countNote}</p>
+                  ) : null}
+
+                  {metricCopy.caveat ? (
+                    <Callout tone="warning" icon="alert" title="How this figure was measured">
+                      {metricCopy.caveat}
+                    </Callout>
+                  ) : null}
+
                   {availability.card.notForRealUse ? (
-                    <Callout tone="danger" icon="alert" title="These predictions are not real sign recognition" assertive>
-                      {availability.card.disclaimer ??
-                        'This model was trained on procedurally generated data to verify that the pipeline works end to end. It has never seen a real ISL sign, so it must not be presented as a working recogniser.'}
+                    <Callout
+                      tone="danger"
+                      icon="alert"
+                      title={notForRealUseCopy(availability.card).title}
+                      assertive
+                    >
+                      {notForRealUseCopy(availability.card).detail}
                     </Callout>
                   ) : null}
 

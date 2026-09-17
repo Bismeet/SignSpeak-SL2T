@@ -20,7 +20,7 @@ import {
   type ReactNode,
 } from 'react';
 import { config } from '@/lib/config';
-import { loadModelCard, modelUnavailableCopy } from '@/lib/model/card';
+import { loadModelCard, modelUnavailableCopy, notForRealUseCopy } from '@/lib/model/card';
 import { loadClassifier, type SignClassifier } from '@/lib/model/loader';
 import { checkModelVocabulary } from '@/lib/signs/vocabulary';
 import { useSettings } from '@/lib/state/settings';
@@ -73,8 +73,13 @@ export function ModelProvider({ children }: { children: ReactNode }) {
       }
 
       // The model's classes must all be known glosses, otherwise the app could emit a
-      // word it cannot explain or display (see lib/signs/vocabulary.ts).
-      const vocabularyCheck = checkModelVocabulary(result.card.vocabulary);
+      // word it cannot explain or display (see lib/signs/vocabulary.ts). The declared
+      // negative class is excluded: it is not a sign, and its presence is what lets the
+      // model refuse an input instead of guessing.
+      const vocabularyCheck = checkModelVocabulary(
+        result.card.vocabulary,
+        result.card.negativeClass,
+      );
       if (!vocabularyCheck.ok) {
         setAvailability({
           state: 'incompatible',
@@ -187,19 +192,20 @@ export function availabilitySummary(availability: ModelAvailability): {
   switch (availability.state) {
     case 'loading':
       return { label: 'Checking sign recognition…', tone: 'neutral', detail: '' };
-    case 'ready':
-      return availability.card.notForRealUse
-        ? {
-            label: 'Smoke-test model loaded (not a real recogniser)',
-            tone: 'warning',
-            detail:
-              'This build is running a model trained on procedurally generated data to exercise the pipeline. Its predictions are not real sign recognition.',
-          }
-        : {
-            label: `Sign recognition ready · ${availability.card.vocabulary.length} signs`,
-            tone: 'success',
-            detail: `Model ${availability.card.modelVersion} running ${availability.runtime === 'backend' ? 'on the configured server' : 'on this device'}.`,
-          };
+    case 'ready': {
+      // The reason a model is not for real use differs (synthetic smoke test vs. real but
+      // publicly-sourced data), so the explanation comes from one shared helper rather than
+      // being hardcoded here.
+      if (availability.card.notForRealUse) {
+        const copy = notForRealUseCopy(availability.card);
+        return { label: copy.title, tone: 'warning', detail: copy.detail };
+      }
+      return {
+        label: `Sign recognition ready · ${availability.card.vocabulary.length} signs`,
+        tone: 'success',
+        detail: `Model ${availability.card.modelVersion} running ${availability.runtime === 'backend' ? 'on the configured server' : 'on this device'}.`,
+      };
+    }
     case 'missing':
       return {
         label: 'Sign recognition not installed',

@@ -22,6 +22,7 @@ import {
 } from '@/components/ui/Field';
 import { Card, Panel, SectionHeading, Stack } from '@/components/ui/Surface';
 import { availabilitySummary, useModel } from '@/lib/state/model-provider';
+import { metricLabels, notForRealUseCopy } from '@/lib/model/card';
 import {
   TEXT_SCALE_LABEL,
   THEME_LABEL,
@@ -41,6 +42,10 @@ import type { TextScale, ThemeChoice } from '@/lib/types';
 export default function SettingsPage() {
   const { settings, update, patch, reset, hydrated } = useSettings();
   const { availability } = useModel();
+  // The card's own splitKind decides whether the count is signers or recording groups.
+  const settingsMetricCopy =
+    availability.state === 'ready' ? metricLabels(availability.card) : null;
+  const settingsMetricCount = settingsMetricCopy?.count.toLowerCase() ?? 'signers';
   const speaker = useSpeaker();
   const summary = availabilitySummary(availability);
 
@@ -240,8 +245,7 @@ export default function SettingsPage() {
                   <div className="flex gap-2">
                     <dt className="font-semibold text-muted">Data</dt>
                     <dd>
-                      {availability.card.dataset.signerCount} signer
-                      {availability.card.dataset.signerCount === 1 ? '' : 's'},{' '}
+                      {availability.card.dataset.signerCount} {settingsMetricCount},{' '}
                       {availability.card.dataset.sampleCount} samples
                     </dd>
                   </div>
@@ -261,9 +265,13 @@ export default function SettingsPage() {
               )}
 
               {availability.state === 'ready' && availability.card.notForRealUse ? (
-                <Callout tone="danger" icon="alert" title="This is a smoke-test model" assertive>
-                  {availability.card.disclaimer ??
-                    'It was trained on procedurally generated data purely to exercise the pipeline. Its predictions are not real sign recognition and must not be presented as such.'}
+                <Callout
+                  tone="danger"
+                  icon="alert"
+                  title={notForRealUseCopy(availability.card).title}
+                  assertive
+                >
+                  {notForRealUseCopy(availability.card).detail}
                 </Callout>
               ) : null}
 

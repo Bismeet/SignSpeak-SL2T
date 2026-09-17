@@ -196,6 +196,7 @@ def default_limitations(
     negative_class: str | None,
     signer_count: int,
     window_accuracy: float | None,
+    training_source: str = "",
 ) -> list[str]:
     """The limitation list written into every model card.
 
@@ -205,10 +206,26 @@ def default_limitations(
     limitations: list[str] = []
 
     if not_for_real_use:
-        limitations.append(
-            "This model is a pipeline smoke test. It was not trained on real ISL recordings "
-            "and must never be used to communicate with a patient."
-        )
+        # Why a model is not for real use differs, and stating the wrong reason is itself a
+        # false claim. A smoke test was never trained on sign language at all; a model trained
+        # on a public research dataset *was* trained on real ISL recordings — it simply was not
+        # collected under this project's own consent process, and nobody has signer-reviewed it.
+        # The earlier wording asserted the synthetic case unconditionally, which would have
+        # been untrue for the first model trained on real data.
+        if training_source == "public_dataset" or training_source.startswith("public_dataset:"):
+            dataset_id = training_source.split(":", 1)[1] if ":" in training_source else "a public research corpus"
+            limitations.append(
+                "This model is not for real use. It was trained on real Indian Sign Language "
+                f"recordings from the public research dataset '{dataset_id}', but that data was "
+                "not collected under this project's own consent process, no qualified ISL signer "
+                "has reviewed its vocabulary or its predictions, and its evaluation is not "
+                "signer-independent. It must never be used to communicate with a patient."
+            )
+        else:
+            limitations.append(
+                "This model is a pipeline smoke test. It was not trained on real ISL recordings "
+                "and must never be used to communicate with a patient."
+            )
 
     limitations.append(
         f"Trained on {len(classes)} classes only: {', '.join(classes)}. "

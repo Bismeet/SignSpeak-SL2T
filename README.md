@@ -46,8 +46,10 @@ npm run verify       # typecheck + lint + data validation + tests + production b
 | `npm run verify` | Everything above, in order |
 | `npm run serve:static` | Serve `out/` locally (used by the browser tests) |
 | `npm run ml:setup` | Create the Python training environment |
+| `npm run ml:setup:extract` | Create the MediaPipe extraction environment |
 | `npm run ml:smoke` | Prove the training pipeline works, with no data |
 | `npm run ml:train` | Train on collected data in `ml/data` |
+| `npm run ml:pipeline` | Download a public ISL subset, extract, train and export |
 | `npm run ml:eval` | Re-evaluate an exported model |
 | `npm run ml:algorithms` | List candidate algorithms and which are exportable |
 | `npm run ml:fixtures` | Regenerate the TS/Python parity fixtures |
@@ -183,18 +185,36 @@ Built to WCAG 2.2 AA, with WAI-ARIA Authoring Practices and GIGW in mind.
 
 ---
 
-## Training a real model
+## Training a model
 
 ```bash
-npm run ml:setup     # Python 3.9-3.12; creates ml/.venv
-npm run ml:smoke     # proves the pipeline works, with generated landmarks
-npm run ml:train     # the real run; needs data in ml/data
+npm run ml:setup           # Python 3.9-3.12; creates ml/.venv (training)
+npm run ml:setup:extract   # creates ml/.venv-extract (MediaPipe, for feature extraction)
+npm run ml:smoke           # proves the pipeline works, with generated landmarks
+npm run ml:train           # the real run; needs collected data in ml/data
 ```
 
-Full instructions in [`ml/README.md`](ml/README.md) and
-[`ml/data/README.md`](ml/data/README.md).
+To train without collected data of your own, from a public ISL research corpus:
 
-**What a real model requires, and none of it can be automated away:**
+```bash
+npm run ml:pipeline    # download + extract + train, end to end
+```
+
+which is `ml:download` (fetch clips) → `ml:extract` (MediaPipe → 159-float features) →
+`ml:train:v1` (train, export ONNX, stage into `public/models`). Full instructions in
+[`ml/README.md`](ml/README.md) and [`ml/data/README.md`](ml/data/README.md).
+
+**There are two Python environments on purpose.** MediaPipe requires numpy 2, and the
+training environment needs numpy 1.x because scikit-learn 1.4.2 and skl2onnx 1.17.0 were
+built against that ABI. Installing MediaPipe into the training environment breaks every ONNX
+export. The two exchange JSON files and never import each other.
+
+A model trained from a public corpus is exported with `notForRealUse: true` and
+`trainingSource: "public_dataset"`, because that data was not collected under this project's
+consent process and no signer here has reviewed it. The app loads it and labels it plainly as
+not a clinical recogniser.
+
+**What a model of our own requires, and none of it can be automated away:**
 
 1. An ISL signer to confirm the canonical form of each gloss in
    `data/sign-vocabulary.json`. Every entry is currently `verification: "unverified"`, and

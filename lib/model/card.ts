@@ -78,7 +78,9 @@ export function parseModelCard(input: unknown): ModelCardLoadResult {
 
   const trainingSource = asString(input.trainingSource, 'none');
   const normalisedTrainingSource: ModelCard['trainingSource'] =
-    trainingSource === 'collected_consented_dataset' || trainingSource === 'synthetic_smoke_test'
+    trainingSource === 'collected_consented_dataset' ||
+    trainingSource === 'public_dataset' ||
+    trainingSource === 'synthetic_smoke_test'
       ? trainingSource
       : 'none';
 
@@ -197,5 +199,104 @@ export function modelUnavailableCopy(kind: 'missing' | 'invalid' | 'error', reas
     explanation: reason,
     remedy:
       'No trained model ships with this build, because a model can only be trained on consented landmark data collected from ISL signers. Everything else works: the phrase board, typing, speech and Emergency mode. To enable recognition, follow "Training a recognition model" in README.md.',
+  };
+}
+
+/**
+ * The explanation shown wherever a model is flagged `notForRealUse`.
+ *
+ * Kept in one place because three screens render it — the Home status row, the Limitations
+ * screen and Settings — and they must not disagree.
+ *
+ * The *reason* a model is not for real use differs, and stating the wrong one is itself a
+ * false claim about the model. A smoke test has never seen a sign language sign; a model
+ * trained on a public research corpus has seen real ISL, but that data was not collected
+ * under this project's consent process and no signer here has reviewed it. The earlier copy
+ * said "procedurally generated" unconditionally, which would have been untrue of the latter.
+ */
+export function notForRealUseCopy(card: Pick<ModelCard, 'trainingSource' | 'vocabulary'>): {
+  title: string;
+  detail: string;
+} {
+  const signs = card.vocabulary.filter((gloss) => gloss !== 'OTHER').join(', ');
+
+  if (card.trainingSource === 'public_dataset') {
+    return {
+      title: 'Trained on public research data — not a clinical recogniser',
+      detail:
+        `This model was trained on real Indian Sign Language recordings from a published ` +
+        `research dataset${signs ? `, covering ${signs}` : ''}. That data was not collected ` +
+        `under this project's consent process, no qualified ISL signer has reviewed the ` +
+        `vocabulary or the predictions, and the evaluation is not signer-independent. Treat ` +
+        `its output as a demonstration, never as sign recognition you can rely on.`,
+    };
+  }
+
+  return {
+    title: 'These predictions are not real sign recognition',
+    detail:
+      'This model was trained on procedurally generated data to verify that the pipeline ' +
+      'works end to end. It has never seen a real ISL sign, so it must not be presented as ' +
+      'a working recogniser.',
+  };
+}
+
+/**
+ * Labels for the headline metrics, derived from how the model was actually evaluated.
+ *
+ * The card schema calls the headline number `heldOutSignerMacroF1`, and the UI used to print
+ * "Held-out-signer macro F1" and "Signers" unconditionally. Both overstate a model whose
+ * split was not signer-independent: `splitKind` records what the split really was, and the
+ * card carries `optimistic: true` to say the number should not be trusted as a generalisation
+ * estimate. A model evaluated on held-out recording *groups* is not evidence about unseen
+ * people, and the screen must not say it is.
+ */
+export function metricLabels(card: Pick<ModelCard, 'metrics'>): {
+  macroF1: string;
+  count: string;
+  countNote: string;
+  caveat: string | null;
+} {
+  const splitKind = card.metrics?.splitKind ?? null;
+  const optimistic = card.metrics?.optimistic ?? false;
+
+  if (splitKind === 'held-out-signer') {
+    return {
+      macroF1: 'Held-out-signer macro F1',
+      count: 'Signers',
+      countNote: '',
+      caveat: null,
+    };
+  }
+
+  if (splitKind === 'held-out-group') {
+    return {
+      macroF1: 'Held-out-group macro F1',
+      count: 'Recording groups',
+      countNote: 'Groups, not verified signers — the same person may appear in both halves.',
+      caveat:
+        'This was not a signer-independent evaluation, so the figure is optimistic and says ' +
+        'nothing reliable about how the model behaves for someone it has not seen.',
+    };
+  }
+
+  if (splitKind === 'random-sample') {
+    return {
+      macroF1: 'Random-split macro F1',
+      count: 'Recording groups',
+      countNote: '',
+      caveat:
+        'Frames from the same recording appear in both halves of this split, so the figure ' +
+        'is close to meaningless. It is reported for completeness only.',
+    };
+  }
+
+  return {
+    macroF1: optimistic ? 'Held-out macro F1 (optimistic)' : 'Held-out macro F1',
+    count: 'Recording groups',
+    countNote: '',
+    caveat: optimistic
+      ? 'The split used for this figure was not signer-independent, so treat it as optimistic.'
+      : null,
   };
 }

@@ -20,6 +20,11 @@
 # 4.25.3 is the last 4.x release and works with onnx 1.16.1. protobuf is only used by
 # the ONNX exporter, so this pin does not affect the browser runtime.
 
+# huggingface_hub is pure Python and safe with numpy 1.x: it is only used by
+# download_data.py, which fetches the training clips. Feature extraction needs
+# MediaPipe instead, and that lives in ml/requirements-extract.txt.
+huggingface_hub==1.31.0
+
 numpy==1.26.4
 scipy==1.13.1
 pandas==2.2.2

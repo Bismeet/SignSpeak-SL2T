@@ -24,10 +24,21 @@ import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const VENV_PYTHON =
-  process.platform === 'win32'
-    ? join(ROOT, 'ml', '.venv', 'Scripts', 'python.exe')
-    : join(ROOT, 'ml', '.venv', 'bin', 'python');
+/**
+ * Two environments, because one cannot satisfy both stages.
+ *
+ * MediaPipe requires numpy 2, while scikit-learn 1.4.2 and skl2onnx 1.17.0 are built against
+ * the numpy 1.x ABI and fail to export on numpy 2. So feature extraction runs in
+ * `ml/.venv-extract` and training runs in `ml/.venv`. They pass JSON files to each other and
+ * never need to share an interpreter.
+ */
+const VENV_DIRS = { train: '.venv', extract: '.venv-extract' };
+
+function venvPython(venvDir) {
+  return process.platform === 'win32'
+    ? join(ROOT, 'ml', venvDir, 'Scripts', 'python.exe')
+    : join(ROOT, 'ml', venvDir, 'bin', 'python');
+}
 
 const SETUP_HINT = [
   '',
@@ -40,6 +51,10 @@ const SETUP_HINT = [
   'That installs the packages in ml/requirements.txt into ml/.venv. It is only needed to',
   'train a model — the web application itself never runs Python.',
   '',
+  'Feature extraction additionally needs ml/.venv-extract (MediaPipe, which requires numpy 2):',
+  '',
+  '  npm run ml:setup:extract',
+  '',
 ].join('\n');
 
 function fail(message) {
@@ -48,6 +63,15 @@ function fail(message) {
 }
 
 const args = process.argv.slice(2);
+
+// `--venv extract` selects the MediaPipe environment; anything else uses the training one.
+let venvName = 'train';
+const venvFlag = args.indexOf('--venv');
+if (venvFlag !== -1) {
+  venvName = args[venvFlag + 1] ?? 'train';
+  args.splice(venvFlag, 2);
+}
+const VENV_PYTHON = venvPython(VENV_DIRS[venvName] ?? `.venv-${venvName}`);
 
 if (args.length === 0 || args[0] === '--help' || args[0] === '-h') {
   process.stdout.write(
@@ -72,6 +96,9 @@ if (args.length === 0 || args[0] === '--help' || args[0] === '-h') {
 
 if (args[0] === '--list') {
   for (const name of [
+    'download_data.py',
+    'extract_features.py',
+    'train_and_export.py',
     'scripts/build_fixtures.py',
     'scripts/train.py',
     'scripts/evaluate.py',

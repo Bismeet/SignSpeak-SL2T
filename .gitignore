@@ -21,6 +21,9 @@ blob-report/
 
 # Python
 ml/.venv/
+# The second environment: MediaPipe for feature extraction, kept apart from training because
+# it requires numpy 2 while scikit-learn 1.4.2 and skl2onnx 1.17.0 need numpy 1.x.
+ml/.venv-extract/
 __pycache__/
 *.py[cod]
 *.egg-info/
@@ -48,6 +51,16 @@ public/ort/
 
 # MediaPipe model files are large binaries fetched by scripts/setup-assets.mjs.
 public/models/*.task
+
+# A trained classifier is an artefact of one training run and is reproducible from the
+# manifest plus `npm run ml:pipeline`, so it is not committed — the same reasoning that keeps
+# ml/artifacts/ out of the repository. The app's default state is therefore "no model
+# installed", which it reports honestly on the Home screen and the Limitations page.
+#
+# To ship a model, run `npm run ml:pipeline` (which stages it here) and commit the two files
+# deliberately, having read the metrics in ml/artifacts/v1/run-report.json first.
+public/models/*.onnx
+public/models/model-card.json
 
 # Local landmark log exports. These contain landmark data collected from real people and
 # must never be committed, even pseudonymously.

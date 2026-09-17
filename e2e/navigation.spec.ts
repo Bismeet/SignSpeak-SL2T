@@ -128,13 +128,32 @@ test.describe('the phrase board is honest about what it has', () => {
   test('does not claim clinical validation anywhere in the product', async ({ page }) => {
     // A negative assertion, which is the honest way to test an honesty requirement: the app
     // must never assert the thing it is not.
-    const forbidden = [/clinically validated/i, /medically approved/i, /replaces? (an|the) interpreter/i];
+    //
+    // It has to look for an *affirmative* claim, not the substring. A model card legitimately
+    // says "has not been clinically validated", and matching the bare phrase flagged that
+    // honest sentence as a violation — the test was wrong, not the app. So each hit is
+    // checked for a negation shortly before it.
+    const claimPattern = /(clinically validated|medically approved|replaces? (?:an|the) interpreter)/gi;
+    const negatedBefore = /\b(not|never|no|nor)\b[^.]{0,24}$/i;
+
+    function affirmativeClaims(text: string): string[] {
+      const hits: string[] = [];
+      for (const match of text.matchAll(claimPattern)) {
+        const index = match.index ?? 0;
+        const before = text.slice(Math.max(0, index - 40), index);
+        if (negatedBefore.test(before)) continue;
+        hits.push(match[0]);
+      }
+      return hits;
+    }
+
     for (const route of ROUTES) {
       await page.goto(route.path);
       const text = await page.locator('body').innerText();
-      for (const pattern of forbidden) {
-        expect(text, `${route.path} must not claim ${pattern}`).not.toMatch(pattern);
-      }
+      expect(
+        affirmativeClaims(text),
+        `${route.path} must not claim validation or interpreter replacement`,
+      ).toEqual([]);
     }
   });
 });

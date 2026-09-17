@@ -108,9 +108,25 @@ export interface Prediction {
  * Model metadata
  * ---------------------------------------------------------------------------------- */
 
-/** Where a model's training data came from. Used to keep the UI honest. */
+/**
+ * Where a model's training data came from. Used to keep the UI honest.
+ *
+ * - `collected_consented_dataset` — recorded for this project, with consent. The only source
+ *   that can clear `notForRealUse`.
+ * - `public_dataset` — real sign-language recordings from a published research corpus. The
+ *   signs are real, but nobody on this project consented to the recording and no signer here
+ *   has reviewed the result, so it is still not for real use.
+ * - `synthetic_smoke_test` — procedurally generated landmarks. The model has never seen a
+ *   real sign.
+ * - `none` — absent, unrecognised, or unstated.
+ *
+ * `public_dataset` exists because the other three could not describe a model trained on real
+ * research data: `synthetic_smoke_test` would be false, and `none` would discard the fact
+ * that it *was* trained on real signs. Both would make the UI's explanation wrong.
+ */
 export type ModelTrainingSource =
   | 'collected_consented_dataset'
+  | 'public_dataset'
   | 'synthetic_smoke_test'
   | 'none';
 
@@ -161,7 +177,13 @@ export interface ModelCard {
 }
 
 export interface ModelMetrics {
-  /** Held-out-signer macro F1 (the headline acceptance metric). */
+  /**
+   * Held-out macro F1 — the headline acceptance metric.
+   *
+   * The field name says "signer" because that is what the metric is *supposed* to be. Read
+   * `splitKind` before labelling it: when the split was not signer-independent this number is
+   * optimistic, and calling it a held-out-signer score overstates it. Use `metricLabels()`.
+   */
   heldOutSignerMacroF1: number | null;
   /** Leave-one-signer-out mean macro F1 across folds. */
   losoMeanMacroF1: number | null;
@@ -173,6 +195,20 @@ export interface ModelMetrics {
   classOrder: string[];
   /** Per-frame classifier latency measured during evaluation, milliseconds. */
   inferenceLatencyMs: number | null;
+  /**
+   * How the model was actually evaluated: `held-out-signer`, `held-out-group`, `random-sample`
+   * or `none`. Written by the training pipeline; absent on cards produced before it was
+   * recorded.
+   */
+  splitKind?: string | null;
+  /** Human-readable explanation of the split, including anything it failed to cover. */
+  splitNote?: string | null;
+  /** True when the split was not signer-independent, so every number above is optimistic. */
+  optimistic?: boolean;
+  /** Macro F1 over the sign classes only, excluding the negative class. */
+  macroF1PositiveClasses?: number | null;
+  /** Majority-vote accuracy over whole recordings rather than frames. */
+  windowAccuracy?: number | null;
 }
 
 /* ------------------------------------------------------------------------------------

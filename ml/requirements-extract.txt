@@ -1,0 +1,29 @@
+# SignSpeak feature-extraction environment — Python dependencies.
+#
+# This file is ONLY needed to extract landmarks from video clips, which is the step that
+# feeds training. The web application never runs Python, and a machine that only runs the
+# app needs neither this nor ml/requirements.txt.
+#
+# Install with:
+#   npm run ml:setup:extract
+# or manually:
+#   python -m venv ml/.venv-extract
+#   ml/.venv-extract/Scripts/python -m pip install -r ml/requirements-extract.txt   # Windows
+#   ml/.venv-extract/bin/python   -m pip install -r ml/requirements-extract.txt     # macOS / Linux
+#
+# Why a separate environment from ml/.venv
+# ----------------------------------------
+# MediaPipe depends on numpy 2, and pip will upgrade numpy to satisfy it. scikit-learn 1.4.2
+# and skl2onnx 1.17.0 in ml/.venv are built against the numpy 1.x ABI, so installing
+# MediaPipe there breaks every ONNX export with an ABI error that looks unrelated to the
+# change that caused it. There is no MediaPipe release for Python 3.12 on Windows that pins
+# numpy<2, so the split is unavoidable rather than a preference.
+#
+# The two environments exchange JSON files: extract_features.py writes one sample file per
+# clip, train_and_export.py reads them. Neither imports the other.
+#
+# numpy 2.5.3, opencv-contrib-python 5.0 and the matplotlib/sounddevice/absl-py transitive
+# set are what mediapipe 1.0.1 resolves to on Python 3.12. They are listed here so the
+# environment is reproducible, but only mediapipe is pinned to a version this project chose.
+
+mediapipe==1.0.1

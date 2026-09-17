@@ -103,8 +103,19 @@ export function glossLabel(gloss: string): string {
     .join(' ');
 }
 
-/** Check a model's class list against this vocabulary. */
-export function checkModelVocabulary(classes: string[]): {
+/**
+ * Check a model's class list against this vocabulary.
+ *
+ * `negativeClass` is skipped, because it is not a sign and can never appear in
+ * `data/sign-vocabulary.json`. A negative class is a legitimate and desirable part of a
+ * model's class list — `lib/vision/decision.ts` uses it to reject a prediction outright —
+ * so checking it here rejected every model that had a rejection gate, which is the opposite
+ * of what this project wants. Pass the card's `negativeClass` so it is excluded.
+ */
+export function checkModelVocabulary(
+  classes: string[],
+  negativeClass?: string | null,
+): {
   ok: boolean;
   unknown: string[];
   known: string[];
@@ -112,6 +123,7 @@ export function checkModelVocabulary(classes: string[]): {
   const unknown: string[] = [];
   const known: string[] = [];
   for (const gloss of classes) {
+    if (negativeClass && gloss === negativeClass) continue;
     if (isKnownGloss(gloss)) known.push(gloss);
     else unknown.push(gloss);
   }

@@ -18,12 +18,70 @@ because scikit-learn 1.4.x was built against the numpy 1.x ABI. This only affect
 the web app never runs Python.
 
 ```bash
-npm run ml:setup
+npm run ml:setup           # ml/.venv         — training
+npm run ml:setup:extract   # ml/.venv-extract — feature extraction
 ```
 
-That finds a supported interpreter, creates `ml/.venv` and installs `ml/requirements.txt`.
-It is the only supported way to set up the environment, because it also pins
+**There are two environments, and that is not a preference.** MediaPipe requires numpy 2, and
+installing it into the training environment upgrades numpy and breaks every ONNX export with
+an ABI error from scikit-learn that looks unrelated to the change that caused it. No MediaPipe
+release for Python 3.12 on Windows pins numpy<2, so the split is unavoidable.
+
+| Environment | Holds | Used by |
+| --- | --- | --- |
+| `ml/.venv` | numpy 1.26.4, scikit-learn, skl2onnx, protobuf 4.25.3, huggingface_hub | `download_data.py`, `train_and_export.py`, `scripts/*` |
+| `ml/.venv-extract` | MediaPipe 1.0.1 (numpy 2.5.3, opencv) | `extract_features.py` |
+
+They exchange JSON files on disk and never import each other. `npm run ml:extract` routes
+itself to the right interpreter automatically.
+
+`ml:setup` is the only supported way to set up either environment, because it also pins
 `protobuf==4.25.3` — see [Troubleshooting](#troubleshooting).
+
+---
+
+## Training from a public dataset
+
+If you have no collected data of your own, `sign-clf-v1` can be trained from a public ISL
+research corpus. Three scripts, in order:
+
+```bash
+npm run ml:download    # fetch the isolated-ISL subset (manifest + clips)
+npm run ml:extract     # MediaPipe -> ss-features-v1 sample files
+npm run ml:train:v1    # train, evaluate, export, and stage into public/models
+
+npm run ml:pipeline    # all three, end to end
+```
+
+| Script | Environment | What it does |
+| --- | --- | --- |
+| `download_data.py` | `ml/.venv` | Reads `metadata.csv` from `vidit031/isl-isolated-40words`, discards clips flagged `Needs Manual Review`, selects the target words plus out-of-vocabulary negatives, downloads the MP4s, writes `manifest.json` |
+| `extract_features.py` | `ml/.venv-extract` | Runs the **same** `.task` models the browser loads, converts MediaPipe output into the frame mapping, and calls `ml/signdata/features.py` to produce 159-float vectors. One sample file per clip |
+| `train_and_export.py` | `ml/.venv` | Builds the frame bundle, splits by group, fits the Random Forest, evaluates, exports ONNX, verifies it against scikit-learn, writes the model card, stages into `public/models` |
+
+### Two things these scripts will not let you claim
+
+**The split is not signer-independent, and every output says so.** Only the ISL500 part of
+the source dataset carries real signer identifiers. INCLUDE uses per-video ids
+(`include_MVI_3315`), CISLR uses *word names* (`abstract`, `action`) and ISLRTC has one label
+for all 13 rows. Grouping on the raw `signer` column would therefore put the same person on
+both sides of the split — and for CISLR would group by *class*. The scripts group on a
+source-qualified `group_key` instead, record the split as `held-out-group` rather than
+`held-out-signer`, and set `optimistic: true` on every metric.
+
+**`notForRealUse` stays true.** The card gate in `lib/model/card.ts` only clears that flag for
+`trainingSource === "collected_consented_dataset"`. Public research clips are not recordings
+collected under this project's consent process, so the model is exported with
+`trainingSource: "public_dataset"` and the app shows it as not a clinical recogniser. That is
+the intended outcome, not a bug to work around.
+
+### Why `stop` is not in the vocabulary
+
+The dataset has 4 clips for `stop`, one of them flagged for manual review, from two sources
+with no signer identity — and its source is a dictionary-style recording, a different domain
+from the rest. Three usable clips is not enough to train a class, so the vocabulary is
+`help, water, food, hospital` plus the `OTHER` negative class. `download_data.py` records the
+exclusion and the reason in the manifest, and the trainer puts it in the model card.
 
 ---
 
