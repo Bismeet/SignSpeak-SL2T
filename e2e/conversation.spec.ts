@@ -108,9 +108,11 @@ test.describe('text-to-visual never invents a sign', () => {
     // No card may offer a "Show ISL" control, because there is nothing verified to show.
     await expect(page.getByRole('button', { name: /^show isl video for/i })).toHaveCount(0);
 
-    // The card offers to explain the absence instead, which is the honest affordance.
+    // The card offers to explain the absence instead, which is the honest affordance. An
+    // unverified card carries "Show why there is no ISL video for: X" where a verified one
+    // would carry "Show ISL video for: X".
     await page
-      .getByRole('button', { name: /show why there is no isl video for: where does it hurt/i })
+      .getByRole('button', { name: /show why there is no isl video for: i have pain here/i })
       .first()
       .click();
     await expect(page.getByText(/no verified isl video/i).first()).toBeVisible();
