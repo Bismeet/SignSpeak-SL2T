@@ -40,8 +40,8 @@ npm run verify       # typecheck + lint + data validation + tests + production b
 | `npm start` | Serve the production build (server mode only) |
 | `npm run typecheck` | `tsc --noEmit` |
 | `npm run lint` | ESLint |
-| `npm test` | Vitest, 388 unit tests |
-| `npm run test:e2e` | Playwright, 38 browser tests against the built export |
+| `npm test` | Vitest, 392 unit tests |
+| `npm run test:e2e` | Playwright, 39 browser tests against the built export |
 | `npm run validate` | Phrase and clip data integrity |
 | `npm run verify` | Everything above, in order |
 | `npm run serve:static` | Serve `out/` locally (used by the browser tests) |
@@ -213,8 +213,8 @@ the app behind a permanent banner.
 ## Testing
 
 ```bash
-npm test          # 388 unit tests across 12 files
-npm run test:e2e  # 38 browser tests against the production export
+npm test          # 392 unit tests across 12 files
+npm run test:e2e  # 39 browser tests against the production export
 npm run verify    # typecheck + lint + validate + unit tests + build + browser tests
 ```
 

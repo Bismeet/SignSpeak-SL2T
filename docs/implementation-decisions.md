@@ -485,7 +485,7 @@ list is now cached per document.
 typing flow, the phrase board, permission-denied flows with fake media streams, and sign
 recognition driven by recorded landmark fixtures injected in place of the camera.
 
-**What now exists.** A Playwright suite in `e2e/` (38 tests) runs against the **production
+**What now exists.** A Playwright suite in `e2e/` (39 tests) runs against the **production
 export**, served by `scripts/serve-static.mjs`. It covers:
 
 - the typing flow and the text-to-visual path, including alias matching and the exact
@@ -501,7 +501,7 @@ export**, served by `scripts/serve-static.mjs`. It covers:
 - Emergency mode reachable in one tap and populated with bilingual phrases;
 - that no screen opens the camera without an explicit user action.
 
-**Why it was added.** Two shipping-blocking defects passed all 388 unit tests and were found
+**Why it was added.** Two shipping-blocking defects passed all 392 unit tests and were found
 only by driving the app in a browser (see the note above). Both are now covered by explicit
 regression tests, and a third was found by the suite itself on its first run: matching was
 tied to the reviewer setting, so with nothing verified *no phrase matched* and the app told
