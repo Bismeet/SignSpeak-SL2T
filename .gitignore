@@ -6,6 +6,11 @@ node_modules/
 out/
 next-env.d.ts
 
+# Playwright output: traces, screenshots and the HTML report from `npm run test:e2e`.
+test-results/
+playwright-report/
+blob-report/
+
 # TypeScript incremental build info
 *.tsbuildinfo
 

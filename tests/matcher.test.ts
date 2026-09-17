@@ -188,6 +188,44 @@ describe('refusing to guess', () => {
     }
   });
 
+  it('offers no near-miss for text that shares nothing meaningful', () => {
+    // Without a candidate floor, any phrase sharing a single token was reported as "the
+    // closest phrase". Answering gibberish with "the closest phrase was 'I need the toilet.'"
+    // reads like a recognition the app did not make.
+    const result = matcher.match('the aardvark teleported sideways');
+    expect(result.matched).toBe(false);
+    expect(result.candidates).toEqual([]);
+  });
+
+  it('still offers a near-miss when one is genuinely close', () => {
+    // A controlled pool, because the shared fixture has aliases that turn these inputs into
+    // exact matches. "the doctor is arriving shortly" shares three of five tokens with the
+    // first phrase — Dice 0.6: a useful suggestion, not an acceptance.
+    const custom = createPhraseMatcher([
+      verified({ id: 'p_a', textEn: 'The doctor is coming soon.' }),
+      verified({ id: 'p_b', textEn: 'Please sit down here.' }),
+    ]);
+    const result = custom.match('the doctor is arriving shortly', { fuzzyThreshold: 0.95 });
+    expect(result.matched).toBe(false);
+    expect(result.candidates.length).toBeGreaterThan(0);
+    expect(result.candidates[0]?.score).toBeGreaterThanOrEqual(0.3);
+  });
+
+  it('never returns a candidate below the floor, matched or not', () => {
+    for (const input of ['xyzzy', 'please call an ambulance immediately', 'pain in my elbow']) {
+      const result = matcher.match(input);
+      for (const candidate of result.candidates) {
+        expect(candidate.score, `candidate for "${input}"`).toBeGreaterThanOrEqual(0.3);
+      }
+    }
+  });
+
+  it('honours an explicit candidate floor', () => {
+    const strict = createPhraseMatcher(VERIFIED);
+    const result = strict.match('water please', { candidateFloor: 0.95 });
+    expect(result.candidates).toEqual([]);
+  });
+
   it('never invents a phrase id that is not in the list', () => {
     const inputs = [
       'something entirely different',
@@ -247,6 +285,13 @@ describe('unverified phrases are excluded by default', () => {
 
 describe('the data file that actually ships', () => {
   // This uses the real data/phrases.json through the real data module.
+  //
+  // Note for whoever wires this up next: the matcher's conservative default is correct, but
+  // it means a caller that passes `includeUnverified: false` while nothing is verified will
+  // match *nothing at all*. `app/talk/page.tsx` therefore always passes `true` — the gate
+  // that matters is `clipAvailability`, which stops an unverified clip being shown as ISL.
+  // Tying this option to the reviewer setting instead made the app tell users that phrases in
+  // its own list were not in the list. `e2e/conversation.spec.ts` guards that call site.
   it('matches nothing by default, because no phrase is verified yet', async () => {
     const { PHRASE_MATCHER, phraseSummary } = await import('@/lib/phrases/data');
 

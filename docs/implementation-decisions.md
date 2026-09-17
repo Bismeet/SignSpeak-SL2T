@@ -479,20 +479,45 @@ list is now cached per document.
 
 ---
 
-## D-22 — No browser-level end-to-end test suite **OPEN**
+## D-22 — Browser-level tests exist, but not the full suite §6 describes **PARTLY RESOLVED**
 
 **What the docs said.** `testing-and-evaluation.md` §6 specifies Playwright E2E covering the
 typing flow, the phrase board, permission-denied flows with fake media streams, and sign
 recognition driven by recorded landmark fixtures injected in place of the camera.
 
-**Decision.** Not implemented. 388 unit and component tests exist instead.
+**What now exists.** A Playwright suite in `e2e/` (38 tests) runs against the **production
+export**, served by `scripts/serve-static.mjs`. It covers:
 
-**Why.** The E2E layer is the largest remaining gap, and it is a gap by choice: the effort was
-spent on making the pipeline correct and honest end to end, which is verifiable without a
-browser, rather than on a browser harness that would need its own CI media plumbing. The
-documented T-* test IDs that depend on a real browser (T-PERM-01 … T-PERM-08, T-SIGN-01 … 08,
-T-SPCH-01 … 07, T-CONV-01 … 03) are therefore **unverified as automated tests**, and this build
-does not claim otherwise.
+- the typing flow and the text-to-visual path, including alias matching and the exact
+  "No verified ISL video for this phrase" wording (FR-VIS-02, FR-VIS-03);
+- the camera path with Chrome's synthetic media device: no `<video>` before an explicit tap,
+  the stream actually reaching the element with decoded frames, the tracking loop iterating,
+  pause and stop, and an honest "Not recognised" rather than a guess;
+- that starting the camera never requests audio (NFR-01);
+- privacy as behaviour, not copy: a reload loses the conversation, no message text reaches
+  `localStorage` or `sessionStorage`, and no outbound request carries it;
+- structure on every route: one `h1`, `lang="en"`, a skip link, and no unlabelled buttons or
+  images without `alt`;
+- Emergency mode reachable in one tap and populated with bilingual phrases;
+- that no screen opens the camera without an explicit user action.
+
+**Why it was added.** Two shipping-blocking defects passed all 388 unit tests and were found
+only by driving the app in a browser (see the note above). Both are now covered by explicit
+regression tests, and a third was found by the suite itself on its first run: matching was
+tied to the reviewer setting, so with nothing verified *no phrase matched* and the app told
+users that phrases in its own list were not in the list. That is fixed — the verification gate
+applies to the clip, never to recognising text the user already typed.
+
+**Still missing from §6.** The permission-denied flows are covered indirectly (the camera error
+mapping is unit-tested, and the suite asserts no camera is opened unasked), but there is no
+test that drives an actual denial with a fake media stream. Sign recognition is not driven from
+the recorded landmark fixtures — the replay path exists and is reachable, but the suite asserts
+the live camera path instead. There is no axe scan and no screen-reader pass, which §4 asks
+for. And a real hand on a real camera is still untested, because it needs a trained model and
+recorded signs, neither of which exists.
+
+So this is no longer "no browser tests"; it is "browser tests for the flows that can be
+automated here, and a named list of the ones that cannot".
 
 **Partially covered instead.** Camera error mapping, permission state copy, the decision gate,
 phrase matching, the backend contract, capability detection and voice ranking are covered by

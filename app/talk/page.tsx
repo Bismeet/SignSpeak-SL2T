@@ -126,9 +126,16 @@ export default function TalkPage() {
 
   const sendHearingMessage = useCallback(
     (text: string, source: 'speech_recognition' | 'typed') => {
-      const match = PHRASE_MATCHER.match(text, {
-        includeUnverified: settings.showUnverifiedPhrases,
-      });
+      // Match against the whole curated list, not only the verified subset.
+      //
+      // `includeUnverified` gates whether a verified *clip* may be offered, and that gate is
+      // applied separately below through `clipAvailability`. It must not gate whether the app
+      // can recognise text the user has already typed. With it tied to the reviewer setting,
+      // and no clip verified yet, every phrase failed to match and the app told the user "no
+      // phrase in the curated list matches this" — for phrases that are in the list. Nothing
+      // unverified can reach the deaf user as ISL as a result, because the clip is still
+      // gated and the note says plainly that no verified video exists.
+      const match = PHRASE_MATCHER.match(text, { includeUnverified: true });
       const phrase = match.matched ? match.phrase : null;
       const availability = phrase ? clipAvailability(phrase) : null;
       const mode = availability === 'verified_clip' ? 'isl_clip' : 'text_only';
@@ -164,7 +171,7 @@ export default function TalkPage() {
         );
       }
     },
-    [dispatch, settings.showUnverifiedPhrases],
+    [dispatch],
   );
 
   /* ---------------------------------------------------------------------------------

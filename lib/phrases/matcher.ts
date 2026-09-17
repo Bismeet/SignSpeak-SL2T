@@ -125,10 +125,25 @@ export interface PhraseMatch {
 }
 
 export interface MatchOptions {
-  /** Include `draft`/`unverified` phrases in the candidate set. Default: false. */
+  /**
+   * Include `draft`/`unverified` phrases in the candidate set. Default: false.
+   *
+   * This gates whether an unverified phrase may be *offered*. It must not be used to decide
+   * whether text the user has already typed can be recognised: the clip is gated separately
+   * by `clipAvailability`, and tying this to the reviewer setting made the app report "no
+   * phrase in the curated list matches this" for phrases that are in the list.
+   */
   includeUnverified?: boolean;
   /** Minimum Dice score to accept a fuzzy match. */
   fuzzyThreshold?: number;
+  /**
+   * Minimum Dice score for a phrase to be offered as a near-miss. Default: 0.3.
+   *
+   * Candidates are suggestions ("did you mean"), so a phrase that merely shares one token is
+   * noise and reads like a recognition the app did not make. Below this floor the honest
+   * answer is that nothing in the list matches.
+   */
+  candidateFloor?: number;
   /** Maximum number of near-miss candidates to return. */
   maxCandidates?: number;
 }
@@ -184,6 +199,7 @@ export function createPhraseMatcher(phrases: Phrase[]): PhraseMatcher {
     const {
       includeUnverified = false,
       fuzzyThreshold = 0.7,
+      candidateFloor = 0.3,
       maxCandidates = 3,
     } = options;
 
@@ -274,13 +290,20 @@ export function createPhraseMatcher(phrases: Phrase[]): PhraseMatcher {
       .sort((a, b) => b.score - a.score);
 
     const best = scored[0];
+
+    // Only offer near-misses that are plausibly related. Without a floor, *any* phrase sharing
+    // a single token is reported as "the closest phrase" — gibberish would be answered with
+    // "the closest phrase was 'I need the toilet.'", which reads like a recognition the app
+    // did not make. Below the floor the honest answer is that nothing in the list matches.
+    const plausible = scored.filter((entry) => entry.score >= candidateFloor);
+
     if (best && best.score >= fuzzyThreshold) {
       return {
         matched: true,
         phrase: best.phrase,
         method: 'fuzzy',
         score: best.score,
-        candidates: scored.slice(1, 1 + maxCandidates),
+        candidates: plausible.slice(1, 1 + maxCandidates),
         normalisedInput,
       };
     }
@@ -290,7 +313,7 @@ export function createPhraseMatcher(phrases: Phrase[]): PhraseMatcher {
       phrase: null,
       method: 'none',
       score: best?.score ?? 0,
-      candidates: scored.slice(0, maxCandidates),
+      candidates: plausible.slice(0, maxCandidates),
       normalisedInput,
     };
   }

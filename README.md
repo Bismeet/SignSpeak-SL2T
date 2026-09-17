@@ -40,9 +40,11 @@ npm run verify       # typecheck + lint + data validation + tests + production b
 | `npm start` | Serve the production build (server mode only) |
 | `npm run typecheck` | `tsc --noEmit` |
 | `npm run lint` | ESLint |
-| `npm test` | Vitest, 388 tests |
+| `npm test` | Vitest, 388 unit tests |
+| `npm run test:e2e` | Playwright, 38 browser tests against the built export |
 | `npm run validate` | Phrase and clip data integrity |
 | `npm run verify` | Everything above, in order |
+| `npm run serve:static` | Serve `out/` locally (used by the browser tests) |
 | `npm run ml:setup` | Create the Python training environment |
 | `npm run ml:smoke` | Prove the training pipeline works, with no data |
 | `npm run ml:train` | Train on collected data in `ml/data` |
@@ -211,26 +213,38 @@ the app behind a permanent banner.
 ## Testing
 
 ```bash
-npm test          # 388 tests across 12 files
-npm run verify    # + typecheck, lint, data validation, production build
+npm test          # 388 unit tests across 12 files
+npm run test:e2e  # 38 browser tests against the production export
+npm run verify    # typecheck + lint + validate + unit tests + build + browser tests
 ```
 
-The suite covers feature extraction and parity with Python, the accept/reject decision gate,
-phrase matching and normalisation (including Devanagari combining marks), conversation state,
-model-card fail-closed behaviour, the inference backend contract, camera error mapping, device
-status wiring, and speech capability detection and error copy.
+**Unit tests** cover feature extraction and parity with Python, the accept/reject decision
+gate, phrase matching and normalisation (including Devanagari combining marks), conversation
+state, model-card fail-closed behaviour, the inference backend contract, camera error mapping,
+device status wiring, and speech capability detection and error copy.
 
-**Verified in a real browser.** The export was served and driven in Chrome: every screen
-renders, the camera path was exercised with Chrome's fake media device (MediaPipe WASM,
-Hand Landmarker and Pose Landmarker all load, tracking runs at 21 FPS), and the
-model-unavailable fallback behaves correctly. That check found and fixed two defects that no
-unit test could reach — the header camera pill never left "Camera off", and the camera preview
-was permanently blank because the stream was attached before the `<video>` existed. Both now
-have regression guards.
+**Browser tests** (`e2e/`) run against the built export in `out/`, served by
+`scripts/serve-static.mjs`, using Chrome's synthetic media device so the camera path can be
+driven without hardware. They cover the typing and text-to-visual flows, the camera path
+(stream reaching the element, frames decoding, the loop running, pause and stop), that starting
+the camera never requests audio, privacy as behaviour rather than copy (a reload loses the
+conversation; no message text reaches storage or the network), and structure on every route
+(one `h1`, `lang`, a skip link, no unlabelled buttons or images without `alt`).
 
-**Not covered:** an automated browser suite. There is no Playwright/Cypress suite, so camera,
-MediaPipe and Web Speech behaviour is verified by unit tests plus the manual check above rather
-than as a regression test. This is the largest testing gap.
+Run them with Playwright's own browser (`npx playwright install chromium`) or point at an
+existing Chrome with `PLAYWRIGHT_CHROME_PATH=/path/to/chrome`.
+
+**Why the browser tests exist.** Two shipping-blocking defects — a camera preview that never
+received the stream, and a header pill stuck on "Camera off" — passed every unit test and were
+only caught by driving the real app in a browser. A third was then caught by the browser suite
+on its first run: phrase matching was tied to the reviewer setting, so with nothing verified
+*no phrase matched* and the app told users that phrases in its own list were not in the list.
+All three now have regression tests.
+
+**Still not covered:** permission-denied flows driven with a fake stream, sign recognition
+driven from the recorded landmark fixtures, an axe scan, and a screen-reader pass — all named
+in `docs/testing-and-evaluation.md` §4 and §6. And a real hand on a real camera, which needs a
+trained model and recorded signs.
 
 **The recognition acceptance targets in `docs/testing-and-evaluation.md` §2.2 are NOT met and
 are NOT claimed to be met**, because they require real data. `npm run ml:train` prints
