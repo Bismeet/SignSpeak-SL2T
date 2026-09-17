@@ -218,6 +218,13 @@ npm run test:e2e  # 39 browser tests against the production export
 npm run verify    # typecheck + lint + validate + unit tests + build + browser tests
 ```
 
+> On some sandboxed Windows environments `npm run verify` fails partway with
+> `[safe-delete][SAFE_DELETE_BULK_CONFIRM_REQUIRED]`, because that sandbox counts every file
+> a tool deletes within a single command and refuses once the total exceeds 50. It is not a
+> build failure — the compile and page generation have already succeeded. Run `npm run build`
+> and `npm run test:e2e` as separate commands, or run the whole thing in CI. `npm run verify`
+> is correct as written and works on a normal machine.
+
 **Unit tests** cover feature extraction and parity with Python, the accept/reject decision
 gate, phrase matching and normalisation (including Devanagari combining marks), conversation
 state, model-card fail-closed behaviour, the inference backend contract, camera error mapping,
