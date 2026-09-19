@@ -673,3 +673,206 @@ claim cannot be made accidentally.
 **Mirrored in two places on purpose.** `lib/phrases/schema.ts` (runtime) and
 `scripts/validate-phrases.mjs` (CI) are separate implementations that deliberately do not share
 code, so a bug in one does not hide itself in the other.
+
+---
+
+## D-28 — Visual system rewritten: precision clinical dark theme, two-tone accents **DIVERGED**
+
+**Decision.** The dark theme was replaced with a high-contrast "precision clinical" palette
+(obsidian `#090A0F` canvas, `#11141E` cards, hairline borders), every accent was split into a
+text tone and a fill tone, the display font became Plus Jakarta Sans, and the camera overlay's
+neon HUD was deleted. The **day (light) and high-contrast themes are unchanged** apart from
+gaining the new `-solid` tokens.
+
+**Why the accents are two-tone.** This is the load-bearing change and it is easy to undo by
+accident. Each accent now has two values:
+
+| Token | Role |
+| --- | --- |
+| `--ss-primary`, `--ss-danger`, `--ss-success`, `--ss-warning` | **text and border** tone — light enough to clear 4.5:1 on the dark canvas |
+| `--ss-<accent>-solid` | **fill** tone — dark enough to clear 4.5:1 against `--ss-<accent>-ink` |
+
+No single value can do both jobs. For a fill to clear 4.5:1 under white text its relative
+luminance must be **≤ 0.183**; to clear 4.5:1 as text on `#090A0F` it must be **≥ 0.189**. The
+two constraints cannot both hold, so a one-token palette is necessarily either washed out as
+text or unreadable as a fill. The previous dark theme resolved this by using *pastel* fills with
+dark ink, which is what made it read as low-contrast and unfinished.
+
+**Consequence for contributors.** `bg-primary` is now a **text** colour used as a background and
+will look wrong. Fills must use `bg-primary-solid` / `bg-danger-solid` / `bg-success-solid` /
+`bg-warning-solid`. `border-primary` is fine (a border only needs 3:1).
+
+**Contrast audit.** Measured against the dark canvas and card, and against each fill's ink:
+
+| Pair | Ratio | Requirement |
+| --- | --- | --- |
+| `ink` on `bg` | 18.6:1 | 4.5:1 |
+| `ink-muted` (slate-400) on `bg` | 7.7:1 | 4.5:1 |
+| `ink-muted` on `surface` | 7.2:1 | 4.5:1 |
+| `ink-faint` on `bg` | 5.8:1 | 4.5:1 |
+| white on `primary-solid` `#2563EB` | 5.2:1 | 4.5:1 |
+| white on `danger-solid` `#E11D48` | 4.7:1 | 4.5:1 |
+| white on `warning-solid` `#B45309` | 5.0:1 | 4.5:1 |
+| white on `success-solid` `#047857` | 5.5:1 | 4.5:1 |
+| `danger` `#FB7185` on `bg` | 7.4:1 | 4.5:1 |
+| `warning` `#FBBF24` on `bg` | 11.8:1 | 4.5:1 |
+| `success` `#34D399` on `bg` | 10.3:1 | 4.5:1 |
+| `primary` `#60A5FA` on `bg` | 7.8:1 | 4.5:1 |
+
+**Hairline borders are deliberately below 3:1** (1.33:1 on the canvas). They are decorative
+separation, not the sole means of identifying a control — every card is also distinguished by
+its surface fill, and every interactive boundary (buttons, inputs, focus rings) clears 3:1. The
+previous dark theme's borders were 1.56:1, so this is not a regression.
+
+**The neon camera HUD was removed, not restyled.** It was a cyan/magenta HUD with Orbitron and
+Rajdhani display fonts, CRT scanlines, glass readouts and a pulsing fingertip halo. Three
+independent reasons:
+
+1. **It broke the motion rule.** `ui-ux-specification.md` §1 forbids auto-playing animation
+   except user-initiated clip playback. The fingertip halo pulsed continuously on a sine of the
+   frame clock, and the guide banner had an infinite CSS pulse animation. Neither carried
+   information — the same state was already in the tracking indicator and the FPS readout.
+2. **It was less legible, not more.** A coloured bloom disappears against a bright camera
+   background. The skeleton now draws a *dark* halo behind a saturated stroke, which is what
+   makes it readable over a white hospital wall.
+3. **It contradicted the rest of the app.** A neon HUD inside an otherwise clinical interface
+   reads as a different product.
+
+`drawCyberpunkOverlay` is now `drawHandOverlay`, `glowIntensity` is `strokeWeight`, and the
+`SkeletonStyle` no longer takes a frame clock at all — so the overlay is frame-rate independent
+by construction, and a test asserts two identical draws are byte-identical. Handedness is still
+carried by hue (medical blue vs teal), because handedness is a real phonological distinction in
+ISL and must not be flattened.
+
+**Divergences from the supplied design brief.** The brief asked for things that conflict with
+this project's own accessibility requirements. The project's requirements won:
+
+- **Badge text stays `text-sm`, not `text-xs`.** The brief asked for micro-pills throughout. A
+  `micro` size was added for dense metadata (bento tags, model provenance), but the badges that
+  carry *verification and confidence* — the ones a patient or clinician must actually read —
+  keep `text-sm`. Shrinking safety-critical status text to satisfy a visual register is the
+  wrong trade in an app whose first principle is legibility.
+- **Emergency and pain-scale targets stay at 96px+, not 80px.** The brief's 80px minimum is
+  satisfied by the existing 96px floor (`min-h-emergency`); the project's larger figure is kept
+  because this control is used one-handed, under stress, sometimes by someone in pain.
+- **Primary button hover darkens (`#1D4ED8`) rather than lightening (`blue-500`).** The brief
+  asked for a lighter hover. White on `blue-500` is 3.68:1, which fails AA for normal-size text;
+  white on `blue-600` is 5.17:1 and on `blue-700` is 6.70:1. The hover state stays compliant.
+- **The 0–10 pain scale does not "expand slightly" on selection.** Expansion is a layout shift.
+  Selection is an additive treatment instead — the full-strength fill of the *same* severity
+  colour plus a prominent ring — which fixes the real bug the brief identified: selecting a level
+  used to replace its severity colour with the brand fill, so the selected button stopped
+  communicating severity.
+
+**Two real bugs found while doing this.**
+
+1. **`bg-ink` was inverted in the dark theme.** `--ss-ink` is the *foreground* colour, so it is
+   near-white in the dark theme and near-black in the light one. Using it as a background
+   (`bg-ink/90` for the camera letterbox, `bg-ink` for the clip player, `bg-ink/55` for the modal
+   scrim) painted a **white** scrim over a modal in the dark theme. All three are now `bg-black`,
+   which is correct for a media well and a scrim in every theme.
+2. **The pain scale's last row was ragged.** `grid-cols-6` held 11 items, so the final row held
+   five and the right edge did not line up — the "misaligned" complaint in the review. It is now
+   a wrapping flex row whose items grow (`flex-1`) to fill their row, so every row is flush on
+   both edges at any width.
+
+**Three more found by rendering it.** The gate was already green when these were found, which is
+the point: `npm run verify` cannot see any of them.
+
+3. **The emergency phrase buttons did not fill their grid row.** Each `<li>` stretches as a grid
+   item, but the `<button>` inside carried `w-full` and no height, so it sized to its own content.
+   The row containing "I cannot breathe well." — which wraps to two lines — left the other three
+   buttons short and the bottom edge of the row stepped. This is the *same* class of defect as the
+   ragged pain-scale row above, in the same component, and it is fixed the same way: `h-full` on
+   the button so it fills the stretched cell.
+4. **The emergency banner's icon wrapped away from its text.** `flex flex-wrap` with a long `<p>`
+   put the siren on its own line above the copy, which reads as a layout accident rather than a
+   choice. The row is now `items-start` with the paragraph `min-w-0 flex-1`, so the icon stays
+   beside the first line at every width.
+5. **The Settings copy still described a "neon hand outline".** The HUD was removed but its
+   vocabulary survived in user-facing text (and in the `showLandmarkOverlay` doc comment and three
+   test names). All are now de-cyberpunked. Left deliberately: the `hand-skeleton.ts` comments that
+   describe *what the new code replaced*, which are history and worth keeping.
+
+**Gradient text needed a forced-colors fallback.** `.text-gradient-clinical` works by setting
+`color: transparent` and painting the glyphs with a `background-image`. In Windows High Contrast /
+`forced-colors` mode the browser drops `background-image` and substitutes its own palette, so text
+with no colour of its own can render **invisible** — for exactly the users most dependent on the
+accessibility theme. Both a `@media (forced-colors: active)` rule and an explicit
+`[data-theme='contrast']` rule now restore a solid `CanvasText` / `--ss-ink`. Worth noting the
+contrast theme never had a *contrast* problem here (its gradient ran black to `#181818` on white,
+17.8:1); it is the `forced-colors` interaction that made this a defect rather than a preference.
+
+**Fonts.** Plus Jakarta Sans is loaded with `next/font/google`, which self-hosts the woff2 files
+at build time and serves them from our own origin — so the runtime makes no request beyond its
+own origin and `privacy-and-safety.md` §7 still holds literally. The family carries no
+Devanagari glyphs, so `hi-IN` strings fall through to Nirmala UI / Noto Sans Devanagari in the
+`--ss-font-sans` chain. That is intended: Devanagari renders in the fallback even when the
+webfont is loaded, which is why those families sit ahead of the generic `sans-serif`.
+
+**How this was checked.** Beyond `npm run verify` (typecheck, lint, phrase/clip validation, 439
+unit tests, the production export, 44 browser tests), every screen was rendered in all three
+themes and looked at, because three of the five defects above are invisible to the test suite.
+The theme sweep also asserts the mechanism rather than the pixels: `data-theme` must be *absent*
+for the default light theme, and equal to `dark` or `contrast` otherwise, so a redesign that only
+ever rendered dark would fail loudly instead of silently breaking two themes.
+
+The camera overlay was captured with the synthetic camera plus `demoReplayLandmarks`, and the
+check is a pixel count on the overlay canvas — the script waits for non-transparent pixels to
+appear. A screenshot alone cannot tell a drawn skeleton from a blank canvas.
+
+**Contrast was measured, not just computed.** The ratios in the table above are arithmetic on the
+token values, which is the weakest form of the claim — `bg-raised/40` over a `from-surface to-bg`
+gradient composites to a background that appears nowhere in the token file. So the rendered DOM
+was walked instead: for all 1,102 text-bearing elements on nine routes in three themes, the
+effective background is resolved by compositing every ancestor layer (alpha and gradient stops
+included), and the real ratio is compared against the threshold for that element's font size and
+weight.
+
+Result: **dark OK, contrast OK, day had one real defect.**
+
+- **`--ss-ink-faint` failed AA in the light theme: 4.32:1 against a 4.5:1 floor.** It measured
+  4.67:1 on pure white — fine — but the page canvas is `#F4F6FC`, slightly darker, which drops it
+  under. That is why a token-by-token check missed it: the token is fine, the *pairing* is not.
+  It affected the footer privacy line, the pain-scale end anchors and the "draft · no clip"
+  metadata. Now `#616C86` (4.86:1 on the canvas, 5.25:1 on white), a hue-preserving darkening that
+  keeps `faint` visibly lighter than `muted`.
+- Worth noting the *method* found the defect, not the arithmetic. Two measurement bugs had to be
+  fixed first, and both produced plausible-looking reports: `getComputedStyle` returns a **live**
+  object, so a theme that flips mid-walk yields a mixed result; and because elements carry
+  `transition-colors`, an audit started as soon as `data-theme` lands reads **interpolated**
+  colours — the old palette measured against the new background. Both are now handled (freeze
+  transitions, then assert the attribute held across the walk).
+
+**Interactive states were audited too, and found two more real failures.** The resting-state pass
+above says nothing about hover, focus or selected, which use different token pairs. Measuring
+them (477 hover states, plus a keyboard-driven focus sweep, across the three themes) found both
+remaining defects, and both are the two-tone trap the system exists to prevent:
+
+- **`hover:text-primary-strong` on the ReadinessPanel link measured 2.74:1 in the dark theme.**
+  `-strong` is the *fill* hover tone — deliberately dark so white text sits on it — and using it
+  as text on the canvas fails. The system had a text tone and a fill tone but no *text-hover*
+  tone, so the call site reached for the wrong one.
+- **`text-danger` on `bg-danger/20` measured 4.08:1 in the light theme.** The hover tint eats
+  into the margin: `#BE1E2D` is only 5.94:1 on pure white, so a 20% tint drops it under 4.5:1.
+
+Fixed by adding `--ss-primary-hover` and `--ss-danger-hover` to all three themes. They coincide
+with `-strong` in the light theme (a darker shade serves as both text and fill) and diverge in the
+dark one (`#93C5FD` / `#FDA4AF` — *lighter*, because text there must be light while a fill must be
+dark). The `danger-soft` button now darkens its text on hover, which clears 5.55:1 (light) and
+7.94:1 (dark).
+
+**One finding was my own bug, not the app's.** The first focus sweep "found" invisible focus rings
+— `rgb(0 0 0)` on the dark canvas, and `1:1` readings with `outline-style: none`. Both were
+artefacts: `el.focus()` does **not** match `:focus-visible`, so the measurement read the
+*unfocused* style. `--ss-focus` is in fact correct in every theme (`#1E40AF` light, `#93C5FD`
+dark, `#000` high-contrast). Driving focus with real `Tab` presses — the way a keyboard user does
+— clears all of them. Worth stating plainly: a tool reporting an impossible result is evidence
+about the tool first.
+
+**Not verified.** The gradient-clipped headline is measured at its gradient stops rather than
+per-pixel along the glyphs. Selected-state coverage is the 0–10 pain scale at six levels; other
+component-specific selected states are not swept. No screen-reader pass has been run, and the
+overlay has not been checked against a real camera in poor lighting — which is the condition the
+halo (`HALO_COLOR`) exists for.
+

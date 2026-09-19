@@ -64,7 +64,7 @@ export function SpeechInputPanel({ asr, onSend, onAfterSend, className }: Speech
           {asr.listening ? (
             <span
               aria-hidden="true"
-              className="absolute inset-0 animate-pulse-ring rounded-full bg-danger/45 motion-reduce:hidden"
+              className="absolute inset-0 animate-pulse-ring rounded-full bg-danger-solid/45 motion-reduce:hidden"
             />
           ) : null}
           <button
@@ -78,8 +78,8 @@ export function SpeechInputPanel({ asr, onSend, onAfterSend, className }: Speech
               unsupported
                 ? 'cursor-not-allowed border-line bg-raised text-faint'
                 : asr.listening
-                  ? 'border-danger bg-danger text-danger-ink'
-                  : 'border-primary bg-primary text-primary-ink hover:bg-primary-strong',
+                  ? 'border-danger bg-danger-solid text-danger-ink'
+                  : 'border-primary bg-primary-solid text-primary-ink hover:bg-primary-strong',
             )}
           >
             <Icon name={asr.listening ? 'stop' : 'mic'} size="2rem" />

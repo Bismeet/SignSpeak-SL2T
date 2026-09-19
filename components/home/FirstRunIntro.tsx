@@ -128,7 +128,7 @@ export function FirstRunIntro() {
           {CARDS.map((entry, entryIndex) => (
             <span
               key={entry.title}
-              className={`h-2 w-8 rounded-full ${entryIndex === index ? 'bg-primary' : 'bg-line'}`}
+              className={`h-2 w-8 rounded-full ${entryIndex === index ? 'bg-primary-solid' : 'bg-line'}`}
             />
           ))}
         </div>

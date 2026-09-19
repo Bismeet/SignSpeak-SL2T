@@ -6,6 +6,11 @@
  * Design rule enforced here: **never colour alone**. Every badge carries an icon and a
  * text label, so it survives greyscale printing, colour-vision deficiency and screen
  * readers (docs/ui-ux-specification.md §1, NFR-03).
+ *
+ * Visual register: a tinted surface (`bg-<tone>-soft`), the tone's *text* colour and a
+ * matching hairline border — deliberately not a saturated filled pill, which reads as a
+ * default framework alert. See docs/implementation-decisions.md (D-28) for the
+ * two-tone accent rationale.
  */
 
 import { Icon, type IconName } from '@/components/ui/Icon';
@@ -15,18 +20,41 @@ import { CONFIDENCE_BAND_LABEL } from '@/lib/vision/decision';
 
 export type BadgeTone = 'neutral' | 'primary' | 'success' | 'warning' | 'danger' | 'accent';
 
+/**
+ * `micro` is the dense-metadata pill (bento tags, model provenance). `default` is for
+ * status text a user must actually read — verification and confidence — and is
+ * deliberately not shrunk, because this app's first principle is legibility
+ * (docs/ui-ux-specification.md §1).
+ */
+export type BadgeSize = 'micro' | 'default';
+
 const TONES: Record<BadgeTone, string> = {
   neutral: 'bg-raised text-muted border-line',
-  primary: 'bg-primary-soft text-primary border-primary',
-  success: 'bg-success-soft text-success border-success',
-  warning: 'bg-warning-soft text-warning border-warning',
-  danger: 'bg-danger-soft text-danger border-danger',
-  accent: 'bg-accent-soft text-accent border-accent',
+  primary: 'bg-primary-soft text-primary border-primary/40',
+  success: 'bg-success-soft text-success border-success/40',
+  warning: 'bg-warning-soft text-warning border-warning/40',
+  danger: 'bg-danger-soft text-danger border-danger/40',
+  accent: 'bg-accent-soft text-accent border-accent/40',
+};
+
+const SOLID_TONES: Record<BadgeTone, string> = {
+  neutral: 'bg-raised text-ink border-line',
+  primary: 'bg-primary-solid text-primary-ink border-transparent',
+  success: 'bg-success-solid text-success-ink border-transparent',
+  warning: 'bg-warning-solid text-warning-ink border-transparent',
+  danger: 'bg-danger-solid text-danger-ink border-transparent',
+  accent: 'bg-accent text-accent-ink border-transparent',
+};
+
+const SIZES: Record<BadgeSize, string> = {
+  micro: 'gap-1 px-2.5 py-1 text-xs font-medium tracking-wide',
+  default: 'gap-1.5 px-2.5 py-1 text-sm font-semibold',
 };
 
 export interface BadgeProps {
   tone?: BadgeTone;
   icon?: IconName;
+  size?: BadgeSize;
   children: React.ReactNode;
   className?: string;
   /** Native tooltip, e.g. the verifier's name on a verification badge. */
@@ -35,25 +63,26 @@ export interface BadgeProps {
   solid?: boolean;
 }
 
-export function Badge({ tone = 'neutral', icon, children, className, title, solid = false }: BadgeProps) {
+export function Badge({
+  tone = 'neutral',
+  icon,
+  size = 'default',
+  children,
+  className,
+  title,
+  solid = false,
+}: BadgeProps) {
   return (
     <span
       title={title}
       className={cn(
-        'inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-sm font-semibold leading-none',
-        solid
-          ? tone === 'danger'
-            ? 'border-transparent bg-danger text-danger-ink'
-            : tone === 'warning'
-              ? 'border-transparent bg-warning text-warning-ink'
-              : tone === 'success'
-                ? 'border-transparent bg-success text-success-ink'
-                : 'border-transparent bg-primary text-primary-ink'
-          : TONES[tone],
+        'inline-flex items-center rounded-full border leading-none',
+        SIZES[size],
+        solid ? SOLID_TONES[tone] : TONES[tone],
         className,
       )}
     >
-      {icon ? <Icon name={icon} size="0.95rem" /> : null}
+      {icon ? <Icon name={icon} size={size === 'micro' ? '0.85rem' : '0.95rem'} /> : null}
       <span>{children}</span>
     </span>
   );
@@ -155,13 +184,46 @@ export interface StatusPillProps {
   label: string;
   /** Extra detail announced to screen readers but not shown, e.g. the exact error. */
   srDetail?: string;
+  /**
+   * Renders a small state dot ahead of the icon. Purely decorative — the label already
+   * carries the state, and the dot is `aria-hidden`, so it never changes the accessible
+   * name (the header pill's text is asserted verbatim by the browser suite).
+   */
+  dot?: boolean;
   className?: string;
   onClick?: () => void;
 }
 
-export function StatusPill({ tone, icon, label, srDetail, className, onClick }: StatusPillProps) {
+/** Glow only on a live/active state; the "off" state is a flat, dimmed dot. */
+const DOT_GLOW: Record<BadgeTone, string> = {
+  success: 'shadow-[0_0_6px_1px_currentColor]',
+  warning: 'shadow-[0_0_6px_1px_currentColor]',
+  danger: 'shadow-[0_0_6px_1px_currentColor]',
+  primary: 'shadow-[0_0_6px_1px_currentColor]',
+  accent: 'shadow-[0_0_6px_1px_currentColor]',
+  neutral: 'opacity-60',
+};
+
+export function StatusPill({
+  tone,
+  icon,
+  label,
+  srDetail,
+  dot = false,
+  className,
+  onClick,
+}: StatusPillProps) {
   const content = (
     <>
+      {dot ? (
+        <span
+          aria-hidden="true"
+          className={cn(
+            'inline-block h-1.5 w-1.5 shrink-0 rounded-full bg-current',
+            DOT_GLOW[tone],
+          )}
+        />
+      ) : null}
       <Icon name={icon} size="0.95rem" />
       <span>{label}</span>
       {srDetail ? <span className="sr-only"> — {srDetail}</span> : null}
@@ -192,7 +254,7 @@ export function StatusPill({ tone, icon, label, srDetail, className, onClick }: 
 /** Small keyboard-shortcut hint, e.g. `<Kbd>Enter</Kbd>`. */
 export function Kbd({ children }: { children: React.ReactNode }) {
   return (
-    <kbd className="rounded-md border border-line bg-raised px-1.5 py-0.5 font-sans text-xs font-semibold text-muted">
+    <kbd className="rounded-md border border-line bg-raised px-1.5 py-0.5 font-mono text-xs font-semibold text-muted">
       {children}
     </kbd>
   );

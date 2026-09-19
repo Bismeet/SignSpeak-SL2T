@@ -91,6 +91,7 @@ export interface ConversationFeedProps {
   /** Content shown when the feed is empty; the parent supplies screen-specific actions. */
   emptyState?: React.ReactNode;
   className?: string;
+  autoScroll?: boolean;
 }
 
 export function ConversationFeed({
@@ -105,27 +106,50 @@ export function ConversationFeed({
   onPlayClip,
   emptyState,
   className,
+  autoScroll = false,
 }: ConversationFeedProps) {
   const endRef = useRef<HTMLDivElement | null>(null);
   const lastCountRef = useRef(messages.length);
 
-  // Keep the newest message in view without stealing focus.
+  // Keep the newest message in view without stealing focus only if autoScroll is enabled.
   useEffect(() => {
-    if (messages.length > lastCountRef.current) {
+    if (autoScroll && messages.length > lastCountRef.current) {
       endRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     }
     lastCountRef.current = messages.length;
-  }, [messages.length]);
+  }, [messages.length, autoScroll]);
 
   if (messages.length === 0) {
     return (
       <div className={className}>
         {emptyState ?? (
-          <EmptyState
-            icon="users"
-            title="No messages yet"
-            description="Start by signing at the camera, tapping a phrase, or typing."
-          />
+          <div className="space-y-3 py-1">
+            <div className="flex items-start gap-3 rounded-2xl border border-[#71856A]/20 bg-[#FAF6EE]/90 p-4 transition-colors">
+              <div
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#E3EADF] text-[#3F5745]"
+                aria-hidden="true"
+              >
+                <Icon name="hand" size="1.25rem" />
+              </div>
+              <div className="min-w-0 flex-1 space-y-1">
+                <span className="text-sm font-bold text-[#3F5745]">Patient</span>
+                <p className="text-base text-muted">Recognized message appears here…</p>
+              </div>
+            </div>
+
+            <div className="flex items-start gap-3 rounded-2xl border border-[#C77D60]/20 bg-[#FAF6EE]/90 p-4 transition-colors">
+              <div
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#F7E5DE] text-[#C77D60]"
+                aria-hidden="true"
+              >
+                <Icon name="stethoscope" size="1.25rem" />
+              </div>
+              <div className="min-w-0 flex-1 space-y-1">
+                <span className="text-sm font-bold text-[#C77D60]">Doctor</span>
+                <p className="text-base text-muted">Selected phrase appears here…</p>
+              </div>
+            </div>
+          </div>
         )}
       </div>
     );

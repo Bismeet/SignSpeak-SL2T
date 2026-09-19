@@ -21,28 +21,38 @@ import { cn } from '@/lib/utils/cn';
 
 const PARTY_META: Record<
   ConversationMessage['party'],
-  { label: string; icon: IconName; align: string; bubble: string; accent: string }
+  {
+    label: string;
+    icon: IconName;
+    badgeBg: string;
+    iconColor: string;
+    labelColor: string;
+    border: string;
+  }
 > = {
   deaf_user: {
-    label: 'Deaf user',
+    label: 'Patient',
     icon: 'hand',
-    align: 'items-start',
-    bubble: 'bg-primary-soft border-primary',
-    accent: 'text-primary',
+    badgeBg: 'bg-[#E3EADF]',
+    iconColor: 'text-[#3F5745]',
+    labelColor: 'text-[#3F5745]',
+    border: 'border-[#71856A]/20',
   },
   hearing_user: {
-    label: 'Hearing user',
-    icon: 'mic',
-    align: 'items-end',
-    bubble: 'bg-accent-soft border-accent',
-    accent: 'text-accent',
+    label: 'Doctor',
+    icon: 'stethoscope',
+    badgeBg: 'bg-[#F7E5DE]',
+    iconColor: 'text-[#C77D60]',
+    labelColor: 'text-[#C77D60]',
+    border: 'border-[#C77D60]/20',
   },
   system: {
     label: 'SignSpeak',
     icon: 'info',
-    align: 'items-center',
-    bubble: 'bg-raised border-line',
-    accent: 'text-muted',
+    badgeBg: 'bg-[#EAE5D9]',
+    iconColor: 'text-muted',
+    labelColor: 'text-muted',
+    border: 'border-line',
   },
 };
 
@@ -50,7 +60,7 @@ const SOURCE_LABEL: Record<MessageSource, string> = {
   sign_recognition: 'Recognised from signing',
   typed: 'Typed',
   speech_recognition: 'Spoken, then transcribed',
-  phrase_board: 'From the phrase board',
+  phrase_board: 'From phrase board',
   emergency: 'From Emergency mode',
   system: 'SignSpeak',
 };
@@ -92,22 +102,28 @@ export function MessageBubble({
   const hasClip = message.delivery?.mode === 'isl_clip';
 
   return (
-    <li className={cn('flex flex-col gap-1.5', meta.align)}>
-      <div className="flex flex-wrap items-center gap-2 text-sm">
-        <span className={cn('inline-flex items-center gap-1.5 font-semibold', meta.accent)}>
-          <Icon name={meta.icon} size="1rem" />
-          {meta.label}
-        </span>
-        <span className="text-muted">{formatTime(message.createdAt)}</span>
-        <span className="text-faint">· {SOURCE_LABEL[message.source]}</span>
-      </div>
-
+    <li className={cn('flex items-start gap-3 rounded-2xl border bg-[#FAF6EE]/90 p-3.5 transition-colors sm:p-4', meta.border)}>
+      {/* Icon badge matching wireframe */}
       <div
         className={cn(
-          'ss-bordered max-w-full rounded-2xl px-4 py-3 sm:max-w-[85%]',
-          meta.bubble,
+          'flex h-9 w-9 shrink-0 items-center justify-center rounded-xl',
+          meta.badgeBg,
+          meta.iconColor,
         )}
+        aria-hidden="true"
       >
+        <Icon name={meta.icon} size="1.25rem" />
+      </div>
+
+      <div className="min-w-0 flex-1 space-y-1.5">
+        <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
+          <div className="flex items-center gap-2">
+            <span className={cn('text-sm font-bold', meta.labelColor)}>{meta.label}</span>
+            <span className="text-muted">· {SOURCE_LABEL[message.source]}</span>
+          </div>
+          <span className="tabular-nums text-muted">{formatTime(message.createdAt)}</span>
+        </div>
+
         {editing ? (
           <div className="space-y-3">
             <TextAreaField

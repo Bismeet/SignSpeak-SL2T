@@ -58,17 +58,17 @@ export function HomeQuickLinks() {
         {LINKS.map((link) => (
           <li key={link.href}>
             <Link href={link.href} className="block rounded-2xl">
-              <Card elevation="flat" className="h-full transition-colors duration-150 hover:bg-raised">
+              <Card elevation="flat" interactive className="h-full">
                 <Panel padding="md" className="flex h-full gap-3">
-                  <span className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary-soft text-primary">
+                  <span className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-primary/20 bg-primary-soft text-primary">
                     <Icon name={link.icon} size="1.4rem" />
                   </span>
                   <span className="min-w-0">
                     <span className="flex items-center gap-1.5 font-semibold">
                       {link.label}
-                      <Icon name="chevron-right" size="1rem" className="text-muted" />
+                      <Icon name="chevron-right" size="1rem" className="text-faint" />
                     </span>
-                    <span className="mt-1 block text-pretty text-sm text-muted">
+                    <span className="mt-1 block text-pretty text-sm leading-relaxed text-muted">
                       {link.description}
                     </span>
                   </span>

@@ -98,7 +98,7 @@ export function ClipPlayer({
   return (
     <div className={cn('space-y-3', className)}>
       {!isVerified ? (
-        <div className="flex items-center gap-2 rounded-2xl bg-danger px-3 py-2.5 text-danger-ink" role="alert">
+        <div className="flex items-center gap-2 rounded-xl border border-danger/40 bg-danger-solid px-3 py-2.5 text-danger-ink" role="alert">
           <Icon name="alert" size="1.3rem" />
           <p className="font-bold">
             NOT VERIFIED — this is a development placeholder, not ISL
@@ -110,7 +110,7 @@ export function ClipPlayer({
         </Badge>
       )}
 
-      <div className="overflow-hidden rounded-2xl border border-line bg-ink/90">
+      <div className="overflow-hidden rounded-2xl border border-line bg-black">
         {phrase.clip.type === 'youtube' ? (
           embedRequested ? (
             <div className="aspect-video">
@@ -149,13 +149,15 @@ export function ClipPlayer({
         ) : (
           <video
             ref={videoRef}
-            src={phrase.clip.src}
+            src={
+              phrase.clip.src.startsWith('/') ? phrase.clip.src : `/clips/${phrase.clip.src}`
+            }
             controls
             autoPlay={autoPlay}
             playsInline
             preload="metadata"
             onError={() => setVideoError(true)}
-            className="aspect-camera w-full bg-ink"
+            className="aspect-camera w-full bg-black"
             aria-label={`ISL video for: ${caption}`}
           >
             <track kind="captions" label={caption} default />

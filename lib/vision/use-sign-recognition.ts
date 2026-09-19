@@ -46,6 +46,7 @@ import {
 } from '@/lib/vision/decision';
 import { useModel } from '@/lib/state/model-provider';
 import { useSettings } from '@/lib/state/settings';
+import { drawHandOverlay } from '@/lib/vision/hand-skeleton';
 import type {
   CameraStatus,
   ConfidenceBand,
@@ -114,6 +115,8 @@ export interface UseSignRecognitionResult extends RecognitionSnapshot {
   /** True when the phrase board should be suggested (two consecutive rejections). */
   suggestPhraseBoard: boolean;
   dismissPhraseBoardSuggestion: () => void;
+  /** Line-weight multiplier for the hand overlay; called from the overlay controls. */
+  setStrokeWeight: (value: number) => void;
 }
 
 /* ------------------------------------------------------------------------------------
@@ -180,6 +183,7 @@ export function useSignRecognition(
   const replayRef = useRef<{ frames: ReplayFixture['frames']; index: number } | null>(null);
   const lastAcceptedFeaturesRef = useRef<Float32Array | null>(null);
   const mountedRef = useRef(true);
+  const startSessionRef = useRef(0);
 
   const decisionConfig: DecisionConfig = useMemo(
     () => (settings.confidenceMode === 'strict' ? STRICT_DECISION_CONFIG : DEFAULT_DECISION_CONFIG),
@@ -188,6 +192,15 @@ export function useSignRecognition(
   const decisionConfigRef = useRef(decisionConfig);
   decisionConfigRef.current = decisionConfig;
 
+  const strokeWeightRef = useRef(1);
+  /** Line-weight multiplier for the hand overlay; called from the overlay controls. */
+  const setStrokeWeight = useCallback((value: number) => {
+    strokeWeightRef.current = Number.isFinite(value) ? Math.min(2.5, Math.max(0, value)) : 1;
+  }, []);
+
+  // Settings > "Show hand landmarks": adds the diagnostic joint dots and shoulder markers
+  // on top of the always-on skeleton. Read through a ref so toggling the setting never
+  // restarts the camera or the analysis loop.
   const showOverlayRef = useRef(settings.showLandmarkOverlay);
   showOverlayRef.current = settings.showLandmarkOverlay;
 
@@ -239,49 +252,53 @@ export function useSignRecognition(
     });
   }, [snapshot.camera]);
 
-  const drawOverlay = useCallback((frame: FrameLandmarks, video: HTMLVideoElement) => {
+  const drawOverlay = useCallback((frame: FrameLandmarks, video: HTMLVideoElement | null) => {
     const canvas = overlayCanvasRef.current;
     if (!canvas) return;
     const context = canvas.getContext('2d');
     if (!context) return;
 
-    if (canvas.width !== video.videoWidth || canvas.height !== video.videoHeight) {
-      canvas.width = video.videoWidth;
-      canvas.height = video.videoHeight;
-    }
-    context.clearRect(0, 0, canvas.width, canvas.height);
+    // Sync the canvas bitmap to the stream's intrinsic size (`videoWidth/Height`), not the
+    // CSS box, so normalised (0..1) landmarks map 1:1 with zero offset. Replay mode has no
+    // video element, so fall back to the element's own pixel box.
+    const width =
+      video && video.videoWidth > 0
+        ? video.videoWidth
+        : Math.round(canvas.clientWidth) || canvas.width || 640;
+    const height =
+      video && video.videoHeight > 0
+        ? video.videoHeight
+        : Math.round(canvas.clientHeight) || canvas.height || 480;
 
-    // Mirror horizontally to match the CSS-mirrored preview, so the overlay lines up.
-    context.save();
-    context.translate(canvas.width, 0);
-    context.scale(-1, 1);
-    context.lineWidth = 3;
-    context.strokeStyle = 'rgba(96, 226, 148, 0.95)';
-    context.fillStyle = 'rgba(96, 226, 148, 0.95)';
-
-    for (const hand of frame.hands) {
-      for (const landmark of hand.landmarks) {
-        context.beginPath();
-        context.arc(landmark.x * canvas.width, landmark.y * canvas.height, 3.2, 0, Math.PI * 2);
-        context.fill();
-      }
+    if (canvas.width !== width || canvas.height !== height) {
+      canvas.width = width;
+      canvas.height = height;
     }
+    if (canvas.width === 0 || canvas.height === 0) return;
 
-    if (frame.pose) {
-      context.strokeStyle = 'rgba(147, 197, 253, 0.85)';
-      for (const index of [11, 12]) {
-        const landmark = frame.pose.landmarks[index];
-        if (!landmark) continue;
-        context.beginPath();
-        context.arc(landmark.x * canvas.width, landmark.y * canvas.height, 5, 0, Math.PI * 2);
-        context.stroke();
-      }
-    }
-    context.restore();
+    // Hand skeleton, driven by the SAME `frame` object that feeds the
+    // ss-features-v1 / sign-clf-v1.onnx inference path below. `drawHandOverlay`
+    // mirrors x internally to match the CSS-mirrored `<video>` preview, so the canvas
+    // element itself must NOT be flipped in CSS as well.
+    drawHandOverlay(context, frame, canvas.width, canvas.height, {
+      strokeWeight: strokeWeightRef.current,
+      // Settings > "Show hand landmarks": joint dots and shoulder markers on top of the
+      // always-on skeleton.
+      diagnostic: showOverlayRef.current,
+      // Feed opacity is applied by the panel to the `<video>` element itself, not baked
+      // into this bitmap. The overlay is deliberately static: it takes no frame clock, so
+      // it can never animate on its own (docs/ui-ux-specification.md §1).
+      videoOpacity: 1,
+    });
   }, []);
 
   const processFrame = useCallback(
     async (frame: FrameLandmarks, video: HTMLVideoElement | null) => {
+      // Render the overlay from this exact frame FIRST, so the visualiser never depends on
+      // inference succeeding. The same `frame` then flows unchanged into the ss-features-v1
+      // feature extraction + sign-clf-v1.onnx classifier below. `video` is null during a
+      // landmark replay, which is fine — the overlay then uses the canvas' own pixel box.
+      drawOverlay(frame, video);
       const classifier = await ensureClassifier();
       if (!classifier) {
         setModelError('Sign recognition is not available on this device right now.');
@@ -350,8 +367,6 @@ export function useSignRecognition(
         publish({ latestAccepted: accepted });
         onAcceptedRef.current?.(accepted);
       }
-
-      if (video && showOverlayRef.current) drawOverlay(frame, video);
 
       publish({
         current: result.prediction,
@@ -437,6 +452,8 @@ export function useSignRecognition(
    * -------------------------------------------------------------------------------- */
 
   const stop = useCallback(() => {
+    startSessionRef.current++;
+    setPreparing(false);
     runningRef.current = false;
     if (rafRef.current !== null) {
       cancelAnimationFrame(rafRef.current);
@@ -474,6 +491,7 @@ export function useSignRecognition(
 
   const start = useCallback(async () => {
     if (runningRef.current) return;
+    const sessionId = ++startSessionRef.current;
 
     setCameraFailure(null);
     setLandmarkerFailure(null);
@@ -494,6 +512,7 @@ export function useSignRecognition(
         },
       });
     } catch (error) {
+      if (sessionId !== startSessionRef.current) return;
       setPreparing(false);
       if (isLandmarkerFailure(error)) {
         setLandmarkerFailure(error);
@@ -508,7 +527,7 @@ export function useSignRecognition(
       }
       return;
     }
-    if (!mountedRef.current) {
+    if (!mountedRef.current || sessionId !== startSessionRef.current) {
       landmarker.close();
       return;
     }
@@ -517,6 +536,11 @@ export function useSignRecognition(
     // 2. Then the classifier. A missing model is not fatal: the camera preview and the
     //    phrase board still work, and the UI says exactly why recognition is off.
     const classifier = await ensureClassifier();
+    if (!mountedRef.current || sessionId !== startSessionRef.current) {
+      landmarker.close();
+      landmarkerRef.current = null;
+      return;
+    }
     if (!classifier) {
       setModelError(
         availability.state === 'ready'
@@ -538,6 +562,11 @@ export function useSignRecognition(
           const fixture = (await fixtureResponse.json()) as ReplayFixture;
           // Interleave the fixtures so the demo shows distinct signs in sequence.
           frames.push(...fixture.frames.slice(0, 60));
+        }
+        if (sessionId !== startSessionRef.current) {
+          landmarker.close();
+          landmarkerRef.current = null;
+          return;
         }
         if (frames.length > 0) {
           replayRef.current = { frames, index: 0 };
@@ -561,6 +590,14 @@ export function useSignRecognition(
       width: config.captureWidth,
       height: config.captureHeight,
     });
+
+    if (sessionId !== startSessionRef.current) {
+      if (result.ok) stopStream(result.stream);
+      landmarker.close();
+      landmarkerRef.current = null;
+      return;
+    }
+
     setPreparing(false);
 
     if (!result.ok) {
@@ -669,6 +706,7 @@ export function useSignRecognition(
     consumeLastAcceptedFeatures,
     suggestPhraseBoard,
     dismissPhraseBoardSuggestion,
+    setStrokeWeight,
   };
 }
 

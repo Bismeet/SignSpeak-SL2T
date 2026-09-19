@@ -7,48 +7,91 @@
  *
  * Three themes are provided and switched with `data-theme` on <html>:
  *   (unset)      -> "day"    light theme, the default
- *   "dark"       -> night theme
+ *   "dark"       -> "precision" night theme (Linear / Apple Health register)
  *   "contrast"   -> high-contrast theme (black on white, 2px borders, no shadows)
  *
  * All values are bare `R G B` triplets so Tailwind can apply opacity modifiers
  * (e.g. `bg-primary/10`) through the `rgb(var(--token) / <alpha-value>)` mapping in
  * tailwind.config.ts.
  *
+ * ## Two-tone accents
+ *
+ * Every accent exists in two tones, and the split is load-bearing:
+ *
+ *   --ss-<accent>        the *text and border* tone. Light enough to clear 4.5:1 on the
+ *                        dark canvas, so it is safe as `text-primary`, `text-danger`, ...
+ *   --ss-<accent>-solid  the *fill* tone. Dark enough to clear 4.5:1 against
+ *                        `--ss-<accent>-ink`, so it is safe as a button background.
+ *
+ * One tone cannot do both jobs. A blue dark enough for white text on a filled button
+ * (>= 4.5:1) is by definition too dark to read as text on a near-black canvas, and vice
+ * versa. Conflating them is what produced the washed-out pastel palette this theme
+ * replaces: the old dark theme used light pastel fills with dark ink so a single token
+ * could serve both roles, which read as low-contrast and unfinished.
+ *
  * Contrast budget (docs/ui-ux-specification.md §1): body text >= 4.5:1, UI borders
- * >= 3:1, on every theme. See docs/implementation-decisions.md (D-14) for the audit.
+ * >= 3:1, on every theme. Hairline card borders are deliberately below 3:1 — they are
+ * decorative separation, not the sole means of identifying a control; every interactive
+ * boundary (buttons, inputs, focus rings) clears 3:1. Audited in
+ * docs/implementation-decisions.md (D-28).
  */
 
 :root {
   color-scheme: light;
 
-  --ss-bg: 244 246 252;
-  --ss-surface: 255 255 255;
-  --ss-raised: 255 255 255;
-  --ss-line: 223 228 240;
-  --ss-line-strong: 194 202 220;
-  --ss-ink: 15 21 40;
-  --ss-ink-muted: 74 84 110;
-  --ss-ink-faint: 106 116 142;
+  /* SignSpeak exact Wabi-Sabi palette */
+  /* Warm Beige — Main background #F1E8D8 */
+  --ss-bg: 241 232 216;
+  --ss-surface: 248 243 234;
+  --ss-raised: 245 238 227;
 
-  --ss-primary: 67 56 202;
-  --ss-primary-strong: 51 42 168;
-  --ss-primary-soft: 236 236 254;
+  /* Natural Sand — Cards and borders #D5C4A8 */
+  --ss-line: 213 196 168;
+  --ss-line-strong: 189 171 140;
+  --ss-sand: 213 196 168;
+
+  /* Charcoal — Text #292D38 */
+  --ss-ink: 41 45 56;
+  --ss-ink-muted: 76 83 98;
+  --ss-ink-faint: 118 126 142;
+  --ss-charcoal: 41 45 56;
+
+  /* Bamboo Sage — Primary green #71856A */
+  --ss-primary: 113 133 106;
+  --ss-primary-solid: 113 133 106;
+  /* Deep Bamboo — Dark green hover/headings #3F5745 */
+  --ss-primary-strong: 63 87 69;
+  --ss-primary-hover: 63 87 69;
+  --ss-primary-soft: 228 235 225;
   --ss-primary-ink: 255 255 255;
 
-  --ss-accent: 13 128 122;
-  --ss-accent-soft: 224 246 243;
+  --ss-bamboo-sage: 113 133 106;
+  --ss-deep-bamboo: 63 87 69;
+
+  /* Terracotta — Warm accent #C77D60 */
+  --ss-terracotta: 199 125 96;
+  --ss-terracotta-soft: 248 234 228;
+  --ss-accent: 199 125 96;
+  --ss-accent-soft: 248 234 228;
   --ss-accent-ink: 255 255 255;
 
+  --ss-font-serif: 'Playfair Display', 'Fraunces', 'Georgia', 'Cambria', 'Times New Roman', serif;
+  --ss-font-doodle: 'Caveat', 'Patrick Hand', 'Comic Sans MS', cursive;
+
   --ss-danger: 190 30 45;
+  --ss-danger-solid: 190 30 45;
   --ss-danger-strong: 154 22 35;
+  --ss-danger-hover: 154 22 35;
   --ss-danger-soft: 254 233 235;
   --ss-danger-ink: 255 255 255;
 
   --ss-success: 21 116 62;
+  --ss-success-solid: 21 116 62;
   --ss-success-soft: 224 245 232;
   --ss-success-ink: 255 255 255;
 
   --ss-warning: 158 74 8;
+  --ss-warning-solid: 158 74 8;
   --ss-warning-soft: 253 241 224;
   --ss-warning-ink: 255 255 255;
 
@@ -56,48 +99,65 @@
   --ss-shadow: 15 23 42;
   --ss-border-width: 1px;
 
-  /* System stack only: no third-party font CDN request, which keeps the
-     "no data leaves the device" claim (docs/privacy-and-safety.md §3) literally true.
-     Nirmala UI / Noto Sans Devanagari cover the Devanagari strings used by hi-IN. */
-  --ss-font-sans: system-ui, -apple-system, 'Segoe UI Variable Text', 'Segoe UI', Roboto,
-    'Helvetica Neue', 'Noto Sans', 'Nirmala UI', 'Noto Sans Devanagari', 'Arial Unicode MS',
-    sans-serif;
+  /* Plus Jakarta Sans is loaded by `next/font/google` in app/layout.tsx, which
+     self-hosts the woff2 files at build time and serves them from our own origin —
+     so at runtime the app still makes no request beyond its own origin
+     (docs/privacy-and-safety.md §7), and the "no data leaves the device" claim
+     (docs/privacy-and-safety.md §3) stays literally true.
+     Plus Jakarta Sans carries no Devanagari glyphs, so the fallback chain below
+     supplies them: Nirmala UI on Windows, Noto Sans Devanagari elsewhere. Devanagari
+     text therefore renders in the fallback even when the webfont is loaded — that is
+     intended, and is why the Devanagari families sit ahead of the generic `sans-serif`
+     rather than being dropped. */
+  --ss-font-sans: var(--ss-font-jakarta, 'Plus Jakarta Sans'), system-ui, -apple-system,
+    'Segoe UI Variable Text', 'Segoe UI', Roboto, 'Helvetica Neue', 'Noto Sans', 'Nirmala UI',
+    'Noto Sans Devanagari', 'Arial Unicode MS', sans-serif;
   --ss-font-display: var(--ss-font-sans);
 }
 
 [data-theme='dark'] {
   color-scheme: dark;
 
-  --ss-bg: 9 12 23;
-  --ss-surface: 17 22 40;
-  --ss-raised: 24 30 52;
-  --ss-line: 42 50 78;
-  --ss-line-strong: 68 78 112;
-  --ss-ink: 237 241 251;
-  --ss-ink-muted: 172 182 206;
-  --ss-ink-faint: 148 158 184;
+  /* Obsidian canvas, card surface, raised surface. */
+  --ss-bg: 9 10 15; /* #090A0F */
+  --ss-surface: 17 20 30; /* #11141E */
+  --ss-raised: 24 29 44; /* #181D2C */
+  --ss-line: 36 39 48; /* hairline, ~white/8% over the card */
+  --ss-line-strong: 58 64 80; /* ~white/18% */
+  --ss-ink: 248 250 252;
+  --ss-ink-muted: 148 163 184; /* slate-400 */
+  --ss-ink-faint: 124 138 163;
 
-  --ss-primary: 152 146 255;
-  --ss-primary-strong: 178 174 255;
-  --ss-primary-soft: 36 34 78;
-  --ss-primary-ink: 12 14 30;
+  /* Medical blue — the conversational / Deaf-side accent. */
+  --ss-primary: 96 165 250; /* #60A5FA — text + border tone */
+  --ss-primary-solid: 37 99 235; /* #2563EB — fill tone */
+  --ss-primary-strong: 29 78 216; /* #1D4ED8 — fill hover */
+  --ss-primary-hover: 147 197 253; /* #93C5FD — text hover; the fill tone would be 2.74:1 as text */
+  --ss-primary-soft: 14 22 38; /* blue-500/10 over the canvas */
+  --ss-primary-ink: 255 255 255;
 
-  --ss-accent: 66 219 199;
-  --ss-accent-soft: 15 52 51;
+  --ss-accent: 45 212 191; /* #2DD4BF */
+  --ss-accent-soft: 13 42 42;
   --ss-accent-ink: 4 22 22;
 
-  --ss-danger: 255 138 145;
-  --ss-danger-strong: 255 174 179;
-  --ss-danger-soft: 66 24 30;
-  --ss-danger-ink: 34 6 10;
+  /* Crimson rose — life-safety. */
+  --ss-danger: 251 113 133; /* #FB7185 — text + border tone */
+  --ss-danger-solid: 225 29 72; /* #E11D48 — fill tone */
+  --ss-danger-strong: 190 18 60; /* #BE123C — fill hover */
+  --ss-danger-hover: 253 164 175; /* #FDA4AF — text hover; lighter, not the fill tone */
+  --ss-danger-soft: 45 15 25;
+  --ss-danger-ink: 255 255 255;
 
-  --ss-success: 96 226 148;
-  --ss-success-soft: 17 50 33;
-  --ss-success-ink: 4 26 12;
+  --ss-success: 52 211 153; /* #34D399 */
+  --ss-success-solid: 4 120 87; /* #047857 */
+  --ss-success-soft: 12 45 35;
+  --ss-success-ink: 255 255 255;
 
-  --ss-warning: 253 199 92;
-  --ss-warning-soft: 58 43 12;
-  --ss-warning-ink: 32 21 2;
+  /* Amber tint — model disclaimer and verification tags. */
+  --ss-warning: 251 191 36; /* #FBBF24 */
+  --ss-warning-solid: 180 83 9; /* #B45309 */
+  --ss-warning-soft: 45 35 12;
+  --ss-warning-ink: 255 255 255;
 
   --ss-focus: 147 197 253;
   --ss-shadow: 0 0 0;
@@ -117,7 +177,9 @@
   --ss-ink-faint: 40 40 40;
 
   --ss-primary: 0 0 0;
+  --ss-primary-solid: 0 0 0;
   --ss-primary-strong: 0 0 0;
+  --ss-primary-hover: 0 0 0;
   --ss-primary-soft: 255 255 255;
   --ss-primary-ink: 255 255 255;
 
@@ -126,15 +188,19 @@
   --ss-accent-ink: 255 255 255;
 
   --ss-danger: 158 0 16;
+  --ss-danger-solid: 158 0 16;
   --ss-danger-strong: 120 0 12;
+  --ss-danger-hover: 120 0 12;
   --ss-danger-soft: 255 255 255;
   --ss-danger-ink: 255 255 255;
 
   --ss-success: 0 84 40;
+  --ss-success-solid: 0 84 40;
   --ss-success-soft: 255 255 255;
   --ss-success-ink: 255 255 255;
 
   --ss-warning: 106 46 0;
+  --ss-warning-solid: 106 46 0;
   --ss-warning-soft: 255 255 255;
   --ss-warning-ink: 255 255 255;
 
@@ -150,7 +216,6 @@
     font-size: calc(18px * var(--ss-text-scale, 1));
     -webkit-text-size-adjust: 100%;
     text-size-adjust: 100%;
-    scroll-behavior: smooth;
   }
 
   body {
@@ -162,7 +227,7 @@
   h2,
   h3,
   h4 {
-    @apply font-display text-balance;
+    @apply font-display text-balance tracking-tight;
   }
 
   /* Visible, high-contrast focus ring on every interactive element
@@ -236,7 +301,109 @@
   .scrollbar-slim {
     scrollbar-width: thin;
   }
+
+  /* --- Camera overlay chrome -------------------------------------------------
+   * Restrained, clinical equivalents of the neon HUD this replaces. Everything
+   * here is scoped to the camera viewport and pointer-transparent, so it never
+   * restyles the rest of the app and never swallows a recognition tap.
+   *
+   * The overlay's text is `aria-hidden`: the same state is rendered as real,
+   * in-flow text elsewhere in the panel (see docs/ui-ux-specification.md §4). */
+
+  /* Glass status chip floating over the camera feed. */
+  .overlay-chip {
+    background: rgb(9 10 15 / 0.72);
+    border: 1px solid rgb(255 255 255 / 0.1);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+  }
+
+  /* Confidence meter: a single medical-blue fill on a hairline track. No glow. */
+  .overlay-meter {
+    background: linear-gradient(
+      90deg,
+      rgb(var(--ss-primary-solid)) 0%,
+      rgb(var(--ss-primary)) 100%
+    );
+  }
+
+  .overlay-meter-track {
+    background: rgb(9 10 15 / 0.72);
+    border: 1px solid rgb(255 255 255 / 0.1);
+  }
+
+  /* Gradient-masked display text, used for the hero headline only.
+   *
+   * `color: transparent` is the entire mechanism, which is precisely why this needs a
+   * fallback: in Windows High Contrast / forced-colors mode the browser discards
+   * `background-image` and substitutes its own palette, leaving text that has no colour of
+   * its own with nothing to paint — it can disappear outright. Both rules below restore a
+   * real colour.
+   *
+   * The app's own high-contrast theme is flattened as well. Its contrast was never in doubt
+   * (the stop is #181818 on white, 17.8:1), but it is the theme chosen by people who want the
+   * least visual ambiguity, so it should not carry decoration. */
+  .text-gradient-clinical {
+    background-image: linear-gradient(
+      to bottom right,
+      rgb(var(--ss-ink)) 0%,
+      rgb(var(--ss-ink) / 0.92) 45%,
+      rgb(var(--ss-ink-muted)) 100%
+    );
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  [data-theme='contrast'] .text-gradient-clinical {
+    background-image: none;
+    color: rgb(var(--ss-ink));
+  }
+
+  @media (forced-colors: active) {
+    .text-gradient-clinical {
+      background-image: none;
+      color: CanvasText;
+    }
+  }
 }
+
+@layer utilities {
+  .bg-bamboo {
+    background-color: #71856A;
+  }
+  .bg-bamboo-deep {
+    background-color: #3F5745;
+  }
+  .text-bamboo {
+    color: #71856A;
+  }
+  .text-bamboo-deep {
+    color: #3F5745;
+  }
+  .border-bamboo {
+    border-color: #71856A;
+  }
+  .bg-sand {
+    background-color: #D5C4A8;
+  }
+  .border-sand {
+    border-color: #D5C4A8;
+  }
+  .text-charcoal {
+    color: #292D38;
+  }
+  .bg-charcoal {
+    background-color: #292D38;
+  }
+  .text-terracotta {
+    color: #C77D60;
+  }
+  .bg-terracotta {
+    background-color: #C77D60;
+  }
+}
+
 
 /* On-screen only, for screen readers. */
 .sr-only-focusable:not(:focus):not(:focus-within) {
@@ -250,3 +417,14 @@
   white-space: nowrap;
   border-width: 0;
 }
+
+
+
+/* Optimize rendering of long homepage sections to eliminate scroll & navigation lag */
+#how-it-works,
+#where-it-helps,
+#key-features {
+  content-visibility: auto;
+  contain-intrinsic-size: 1px 700px;
+}
+

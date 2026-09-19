@@ -292,10 +292,10 @@ describe('the data file that actually ships', () => {
   // that matters is `clipAvailability`, which stops an unverified clip being shown as ISL.
   // Tying this option to the reviewer setting instead made the app tell users that phrases in
   // its own list were not in the list. `e2e/conversation.spec.ts` guards that call site.
-  it('matches nothing by default, because no phrase is verified yet', async () => {
+  it('matches only verified phrases by default and hides draft phrases', async () => {
     const { PHRASE_MATCHER, phraseSummary } = await import('@/lib/phrases/data');
 
-    expect(phraseSummary().verified).toBe(0);
+    expect(phraseSummary().verified).toBe(1);
 
     // Several realistic inputs, all of which are in the curated list as drafts.
     const inputs = ['I need water.', 'मुझे पानी चाहिए।', 'I need help.', 'Yes.'];
@@ -307,6 +307,11 @@ describe('the data file that actually ships', () => {
           'hidden by default (FR-VIS-01) — a draft clip must never be presented as verified ISL.',
       ).toBe(false);
     }
+
+    // The verified phrase does match by default
+    const verifiedResult = PHRASE_MATCHER.match('Where does it hurt?');
+    expect(verifiedResult.matched).toBe(true);
+    expect(verifiedResult.phrase?.id).toBe('q_where_hurt');
   });
 
   it('does match those phrases once unverified phrases are opted into', async () => {

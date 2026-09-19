@@ -71,6 +71,7 @@ signspeak-landmark-log*.json
 # public/clips deliberately, with a licence and attribution recorded in data/phrases.json.
 public/clips/*
 !public/clips/README.md
+!public/clips/q_where_hurt.mp4
 
 # Editor and OS noise
 .DS_Store

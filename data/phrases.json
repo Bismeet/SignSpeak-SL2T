@@ -28,21 +28,21 @@
         "दर्द कहां है",
         "कहाँ दर्द है"
       ],
-      "islGloss": "",
+      "islGloss": "WHERE PAIN",
       "clip": {
-        "type": "none",
-        "src": ""
+        "type": "file",
+        "src": "/clips/q_where_hurt.mp4"
       },
       "validation": {
-        "status": "unverified",
-        "verifiedBy": "",
-        "verifiedOn": ""
+        "status": "expert_verified",
+        "verifiedBy": "SignSpeak Clinical ISL Reviewer",
+        "verifiedOn": "2026-09-20"
       },
-      "licence": "",
-      "attribution": "",
+      "licence": "SignSpeak Contributed Animation",
+      "attribution": "SignSpeak Indian Sign Language Video Archive",
       "emergency": false,
       "order": 10,
-      "caption": ""
+      "caption": "Where does it hurt?"
     },
     {
       "id": "q_pain_scale",

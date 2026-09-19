@@ -122,8 +122,8 @@ export default function SettingsPage() {
               />
 
               <ToggleField
-                label="Show hand landmarks on the camera preview"
-                description="Draws dots over detected hand and shoulder points. Useful for checking lighting and framing. Off by default for performance and because it looks like recording, which it is not."
+                label="Show hand-point markers on the camera preview"
+                description="Adds a dot on every tracked joint and a marker on each shoulder, over the hand outline. Useful for checking lighting and framing. Off by default because a frame full of dots looks like recording, which it is not."
                 checked={settings.showLandmarkOverlay}
                 onChange={(checked) => update('showLandmarkOverlay', checked)}
               />

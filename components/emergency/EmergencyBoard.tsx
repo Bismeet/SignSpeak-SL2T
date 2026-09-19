@@ -72,13 +72,15 @@ export function EmergencyBoard({
 
   return (
     <div className={cn('space-y-5', className)}>
-      {/* Safety banner: always visible, never dismissible. */}
+      {/* Safety banner: always visible, never dismissible. Solid rose is deliberate —
+          this is the one message on the screen that must not be missable, and the fill
+          clears 4.5:1 against its ink. */}
       <div
-        className="flex flex-wrap items-center gap-3 rounded-2xl bg-danger px-4 py-3 text-danger-ink"
+        className="flex items-start gap-3 rounded-xl border border-danger/40 bg-danger-solid px-4 py-3 text-danger-ink"
         role="alert"
       >
-        <Icon name="siren" size="1.7rem" />
-        <p className="text-pretty font-bold">
+        <Icon name="siren" size="1.7rem" className="mt-0.5" />
+        <p className="min-w-0 flex-1 text-pretty font-bold">
           In a real emergency, call {config.emergencyNumber} and get staff first. SignSpeak helps you
           communicate — it does not call anyone, and it does not assess how serious your condition is.
         </p>
@@ -93,33 +95,38 @@ export function EmergencyBoard({
 
       {/* 8 large buttons */}
       <ul className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        {phrases.slice(0, 8).map((phrase) => (
-          <li key={phrase.id}>
-            <button
-              type="button"
-              onClick={() => choose(phrase)}
-              aria-pressed={selected?.id === phrase.id}
-              className={cn(
-                'ss-bordered flex min-h-emergency w-full flex-col items-center justify-center gap-2 rounded-3xl px-3 py-4 text-center font-bold transition-colors duration-150',
-                selected?.id === phrase.id
-                  ? 'border-primary bg-primary text-primary-ink'
-                  : 'bg-surface text-ink hover:bg-raised',
-              )}
-            >
-              <span className="text-pretty text-xl leading-tight sm:text-2xl">{phrase.textEn}</span>
-              {phrase.textHi ? (
-                <span className="text-pretty text-base font-medium opacity-90" lang="hi">
-                  {phrase.textHi}
+        {phrases.slice(0, 8).map((phrase) => {
+          const isSelected = selected?.id === phrase.id;
+          return (
+            <li key={phrase.id}>
+              <button
+                type="button"
+                onClick={() => choose(phrase)}
+                aria-pressed={isSelected}
+                className={cn(
+                  'flex h-full min-h-emergency w-full flex-col items-center justify-center gap-1.5 rounded-xl border px-3 py-4 text-center transition-colors duration-150',
+                  isSelected
+                    ? 'border-primary bg-primary-soft ring-1 ring-primary/40'
+                    : 'border-line bg-raised/40 hover:border-primary/50 hover:bg-primary/5',
+                )}
+              >
+                <span className="text-pretty text-lg font-semibold leading-tight text-ink sm:text-xl">
+                  {phrase.textEn}
                 </span>
-              ) : null}
-              {clipAvailability(phrase) === 'verified_clip' ? (
-                <Badge tone="success" icon="badge-check">
-                  ISL video
-                </Badge>
-              ) : null}
-            </button>
-          </li>
-        ))}
+                {phrase.textHi ? (
+                  <span className="text-pretty text-sm font-medium text-muted" lang="hi">
+                    {phrase.textHi}
+                  </span>
+                ) : null}
+                {clipAvailability(phrase) === 'verified_clip' ? (
+                  <Badge size="micro" tone="success" icon="badge-check">
+                    ISL video
+                  </Badge>
+                ) : null}
+              </button>
+            </li>
+          );
+        })}
       </ul>
 
       {/* Selected phrase output */}

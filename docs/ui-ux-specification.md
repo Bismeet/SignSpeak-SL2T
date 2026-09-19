@@ -15,6 +15,21 @@ Design principles: **large, legible, honest, one-handed, no dead ends.** Visual 
 | Language | UI in English initially; Hindi strings Should-have; all strings externalised |
 | Icons | Paired with text labels everywhere |
 
+### 1.1 Accents are two-tone
+
+Every accent token exists as a **text/border tone** and a **fill tone**:
+
+| Use | Class | Example token |
+| --- | --- | --- |
+| Text on a canvas or tinted surface, and borders | `text-primary`, `border-danger` | `--ss-primary` |
+| A solid filled control | `bg-primary-solid`, `bg-danger-solid` | `--ss-primary-solid` |
+
+No single value can satisfy both roles: a fill dark enough for white text to clear 4.5:1 is by
+definition too dark to read as text on a near-black canvas. `bg-primary` (the text tone, used as
+a background) will therefore look washed out — use `bg-primary-solid`. Borders only need 3:1, so
+`border-primary` is correct as-is. See `docs/implementation-decisions.md` D-28 for the measured
+ratios.
+
 ## 2. Navigation map
 
 ```
@@ -82,6 +97,9 @@ Behaviours:
 
 - Live preview with optional landmark overlay (toggle; off by default for privacy-feel and performance).
 - Tracking indicator: green "Hands tracked", amber "Move hands into frame", red "No camera".
+- Restrained overlay over the preview: a hairline status chip with the brand plate, CAM / HANDS / RATE readouts, a medical-blue top-match meter, and an auto-hiding "hold both hands inside the frame" guide. It is decorative chrome whose text repeats state that is available as real text elsewhere in the panel. There is no scanline, glow or pulsing layer.
+- Overlay chrome is sized in fixed `px`, never `rem`: the preview is a locked 4:3 box, so rem-sized chrome was clipped by `overflow-hidden` at the largest text size (measured 107 px past the bottom edge at 1.32x). Every value it shows is therefore also rendered in `rem`-scaled text outside the box — camera state in the header pill, slow-FPS in the warning callout, and the tracking indicator in its own row directly under the preview. That in-flow indicator is the only live region; the overlay copy is `aria-hidden`, so a screen-reader user hears the status once.
+- The hand skeleton is drawn as a static frame: a saturated stroke with a dark halo for legibility over a bright camera background, and a fixed-radius fingertip ring. It takes no frame clock, so it cannot animate on its own (§1 "Motion"). Handedness is carried by hue (medical blue for the left hand, teal for the right).
 - Detected chip appears when decision logic accepts; shows word, confidence band, and two buttons: Confirm, Not this.
 - "Not recognised" appears after a stable low-confidence period, with hints; after two in a row, a "Use phrase board instead?" prompt.
 - Camera can be paused (privacy) with a single button; preview goes dark and states "Camera paused".

@@ -45,7 +45,7 @@ export function PhraseCard({
     return (
       <div
         className={cn(
-          'ss-bordered flex h-full flex-col justify-between gap-3 rounded-3xl bg-surface p-4',
+          'ss-bordered flex h-full flex-col justify-between gap-3 rounded-2xl bg-gradient-to-b from-surface to-bg p-4',
           active && 'border-primary ring-2 ring-primary/40',
           className,
         )}

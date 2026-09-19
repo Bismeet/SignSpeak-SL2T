@@ -27,9 +27,15 @@ const config: Config = {
         ink: 'rgb(var(--ss-ink) / <alpha-value>)',
         muted: 'rgb(var(--ss-ink-muted) / <alpha-value>)',
         faint: 'rgb(var(--ss-ink-faint) / <alpha-value>)',
+        // Each accent is two-tone: `DEFAULT` is the text/border tone, `solid` the fill
+        // tone. See the comment block in app/globals.css — one tone cannot clear 4.5:1
+        // as text on the dark canvas *and* as a fill under `-ink`.
         primary: {
           DEFAULT: 'rgb(var(--ss-primary) / <alpha-value>)',
+          solid: 'rgb(var(--ss-primary-solid) / <alpha-value>)',
           strong: 'rgb(var(--ss-primary-strong) / <alpha-value>)',
+          // `-strong` is the *fill* hover (white text sits on it); `-hover` is the *text* hover.
+          hover: 'rgb(var(--ss-primary-hover) / <alpha-value>)',
           soft: 'rgb(var(--ss-primary-soft) / <alpha-value>)',
           ink: 'rgb(var(--ss-primary-ink) / <alpha-value>)',
         },
@@ -40,21 +46,47 @@ const config: Config = {
         },
         danger: {
           DEFAULT: 'rgb(var(--ss-danger) / <alpha-value>)',
+          solid: 'rgb(var(--ss-danger-solid) / <alpha-value>)',
           strong: 'rgb(var(--ss-danger-strong) / <alpha-value>)',
+          hover: 'rgb(var(--ss-danger-hover) / <alpha-value>)',
           soft: 'rgb(var(--ss-danger-soft) / <alpha-value>)',
           ink: 'rgb(var(--ss-danger-ink) / <alpha-value>)',
         },
         success: {
           DEFAULT: 'rgb(var(--ss-success) / <alpha-value>)',
+          solid: 'rgb(var(--ss-success-solid) / <alpha-value>)',
           soft: 'rgb(var(--ss-success-soft) / <alpha-value>)',
           ink: 'rgb(var(--ss-success-ink) / <alpha-value>)',
         },
         warning: {
           DEFAULT: 'rgb(var(--ss-warning) / <alpha-value>)',
+          solid: 'rgb(var(--ss-warning-solid) / <alpha-value>)',
           soft: 'rgb(var(--ss-warning-soft) / <alpha-value>)',
           ink: 'rgb(var(--ss-warning-ink) / <alpha-value>)',
         },
         focus: 'rgb(var(--ss-focus) / <alpha-value>)',
+        sage: {
+          DEFAULT: 'rgb(var(--ss-bamboo-sage) / <alpha-value>)',
+          soft: 'rgb(var(--ss-primary-soft) / <alpha-value>)',
+        },
+        bamboo: {
+          DEFAULT: 'rgb(var(--ss-bamboo-sage) / <alpha-value>)',
+          deep: 'rgb(var(--ss-deep-bamboo) / <alpha-value>)',
+          soft: 'rgb(var(--ss-primary-soft) / <alpha-value>)',
+        },
+        sand: {
+          DEFAULT: 'rgb(var(--ss-sand) / <alpha-value>)',
+          line: 'rgb(var(--ss-line) / <alpha-value>)',
+        },
+        charcoal: {
+          DEFAULT: 'rgb(var(--ss-charcoal) / <alpha-value>)',
+        },
+        terracotta: {
+          DEFAULT: 'rgb(var(--ss-terracotta) / <alpha-value>)',
+          soft: 'rgb(var(--ss-terracotta-soft) / <alpha-value>)',
+        },
+        beige: 'rgb(var(--ss-bg) / <alpha-value>)',
+        blush: 'rgb(var(--ss-terracotta-soft) / <alpha-value>)',
       },
       fontSize: {
         // Root is 18px (see globals.css), so these rem values are ~18px-based.
@@ -93,6 +125,19 @@ const config: Config = {
       fontFamily: {
         sans: ['var(--ss-font-sans)'],
         display: ['var(--ss-font-display)'],
+        serif: ['var(--ss-font-serif)', 'Playfair Display', 'Fraunces', 'Georgia', 'serif'],
+        doodle: ['var(--ss-font-doodle)', 'Caveat', 'cursive'],
+        // Reserved for status readouts (camera/mic pills, FPS, model ids) where a
+        // tabular, engineering register reads as precise rather than decorative.
+        mono: [
+          'ui-monospace',
+          'SFMono-Regular',
+          'SF Mono',
+          'Menlo',
+          'Consolas',
+          'Liberation Mono',
+          'monospace',
+        ],
       },
       keyframes: {
         'fade-rise': {

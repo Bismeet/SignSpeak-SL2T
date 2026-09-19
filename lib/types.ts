@@ -429,6 +429,10 @@ export interface AppSettings {
   ttsLanguage: string;
   /** Recognition strictness (docs/ui-ux-specification.md §3.7). */
   confidenceMode: ConfidenceMode;
+  /**
+   * Adds the diagnostic layer over the always-on hand skeleton: a dot on every tracked
+   * joint and a marker on each shoulder (FR-… camera overlay switch).
+   */
   showLandmarkOverlay: boolean;
   /** FR-HOSP-05: draft/unverified phrases hidden unless this is on. */
   showUnverifiedPhrases: boolean;

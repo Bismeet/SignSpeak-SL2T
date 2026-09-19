@@ -1,17 +1,29 @@
 'use client';
 
 /**
- * Home hero (docs/ui-ux-specification.md §3.1).
+ * Wabi-Sabi & Doodle Art Home Hero.
  *
- * Three actions, in priority order: Start conversation, Emergency phrases, Hospital
- * phrases. Emergency is reachable in exactly one tap from here (FR-HOSP-04).
+ * Full visual presentation:
+ * - Single continuous illustration (/hero-wabi-sabi-bg.jpg) with zero smoke, cuts, or artificial overlays.
+ * - Left edge: Complete organic eucalyptus leaves, sage blob & terracotta corner art.
+ * - Right edge: Complete conversation scene with 100% opacity (signing patient, her chair,
+ *   lush background plant, floating leaf doodles, doctor with stethoscope, desk, clipboard,
+ *   speech bubbles, hanging eucalyptus, and bottom ink sprig).
+ * - Center: Seamless Warm Beige paper canvas (#F1E8D8) hosting large, bold, prominent headline,
+ *   subheading, Bamboo Sage CTA, and trust badges.
+ * - Single-Screen Fit: Perfectly calibrated to fit 100% on one screen without scrolling on compact laptop
+ *   and desktop displays.
  *
- * No camera or microphone permission is requested on this screen, or anywhere else
- * before an explicit user action (docs/privacy-and-safety.md §2).
+ * Palette:
+ * - Warm Beige: #F1E8D8 (background)
+ * - Bamboo Sage: #71856A (primary green)
+ * - Deep Bamboo: #3F5745 (dark green hover & accents)
+ * - Natural Sand: #D5C4A8 (borders & subtle surfaces)
+ * - Charcoal: #292D38 (text)
+ * - Terracotta: #C77D60 (warm accent)
  */
 
-import { BrandMark } from '@/components/layout/BrandMark';
-import { LinkButton } from '@/components/ui/Button';
+import Link from 'next/link';
 import { Icon } from '@/components/ui/Icon';
 import { config } from '@/lib/config';
 
@@ -19,74 +31,139 @@ export function HomeHero() {
   return (
     <section
       aria-labelledby="home-heading"
-      className="relative overflow-hidden border-b border-line bg-surface"
+      className="relative w-full h-[calc(100vh-3.25rem)] min-h-[380px] bg-[#F1E8D8] bg-[url('/hero-wabi-sabi-bg.jpg')] bg-cover bg-center bg-no-repeat flex items-center overflow-hidden transition-colors duration-200"
     >
-      {/* Decorative gradient wash. Hidden from assistive technology and disabled under
-          reduced-motion (it is static, so there is nothing to animate). */}
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-0 opacity-[0.55]"
-        style={{
-          background:
-            'radial-gradient(60rem 24rem at 12% -10%, rgb(var(--ss-primary) / 0.28), transparent 62%), radial-gradient(46rem 22rem at 92% 8%, rgb(var(--ss-accent) / 0.22), transparent 60%)',
-        }}
-      />
 
-      <div className="relative mx-auto w-full max-w-5xl px-3 pb-8 pt-8 sm:px-5 sm:pb-10 sm:pt-12">
-        <div className="flex items-center gap-3">
-          <BrandMark size={52} labelled />
-          <p className="text-sm font-semibold uppercase tracking-[0.16em] text-muted">
-            Indian Sign Language
+
+      <div className="relative z-10 mx-auto w-full max-w-7xl px-4 py-2 sm:px-6 sm:py-3 lg:px-8">
+        <div className="max-w-md sm:max-w-lg lg:max-w-xl pl-1 sm:pl-3">
+          {/* Doodle botanical sketch & Eyebrow */}
+          <div className="flex items-center gap-1.5">
+            <svg
+              className="h-4 w-4 text-[#71856A] shrink-0"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M12 2a7 7 0 0 0-7 7c0 5 7 13 7 13s7-8 7-13a7 7 0 0 0-7-7z" opacity="0.3" />
+              <path d="M12 6c-2 2-3 5-3 8" />
+              <path d="M12 10c2-1 4-2 5-1" />
+              <path d="M12 14c-1.5 1-3 1.5-4 1" />
+            </svg>
+            <p className="font-serif text-xs sm:text-sm font-semibold tracking-wide text-[#3F5745]">
+              Communication without barriers
+            </p>
+          </div>
+
+          {/* Headline - large, bold, prominent typography */}
+          <h1
+            id="home-heading"
+            className="mt-1.5 sm:mt-2 font-serif text-2xl sm:text-3xl lg:text-[2.35rem] xl:text-[2.65rem] font-bold text-[#292D38] leading-[1.12] tracking-tight"
+          >
+            Every conversation <br className="hidden sm:inline" />
+            deserves to be{' '}
+            <span className="relative inline-block text-[#71856A] italic font-serif">
+              understood.
+              {/* Hand-drawn wavy doodle underline */}
+              <svg
+                className="absolute -bottom-1 left-0 w-full text-[#71856A]"
+                viewBox="0 0 260 16"
+                fill="none"
+                preserveAspectRatio="none"
+                aria-hidden="true"
+              >
+                <path
+                  d="M4 11C60 4 125 14 195 7C220 5 245 9 256 10"
+                  stroke="currentColor"
+                  strokeWidth="3.4"
+                  strokeLinecap="round"
+                />
+              </svg>
+            </span>
+          </h1>
+
+          {/* Subheading */}
+          <p className="mt-2 sm:mt-2.5 max-w-md text-xs sm:text-sm md:text-[0.925rem] leading-relaxed text-[#292D38]/85 font-normal">
+            SignSpeak helps deaf and hearing people communicate through Indian Sign Language,
+            text, and speech — with a focus on hospital and emergency situations.
           </p>
-        </div>
 
-        <h1
-          id="home-heading"
-          className="mt-5 max-w-3xl text-balance font-display text-4xl font-bold leading-[1.08] tracking-tight sm:text-5xl"
-        >
-          Two-way communication when the other person does not sign
-        </h1>
+          {/* CTA Buttons - prominent, tactile, high contrast */}
+          <div className="mt-3 sm:mt-4 flex flex-wrap items-center gap-3 sm:gap-4">
+            <Link
+              href="/talk/"
+              prefetch={true}
+              className="inline-flex items-center justify-center gap-2 rounded-full bg-[#71856A] hover:bg-[#3F5745] text-white px-6 py-2.5 sm:px-7 sm:py-3 text-xs sm:text-sm md:text-base font-semibold shadow-md transition-all duration-150 hover:shadow-lg active:scale-[0.98] cursor-pointer"
+            >
+              <span>Start a conversation</span>
+              <span aria-hidden="true" className="text-base leading-none">&rarr;</span>
+            </Link>
 
-        <p className="mt-4 max-w-2xl text-pretty text-lg text-muted sm:text-xl">
-          SignSpeak helps a deaf Indian Sign Language user and a hearing person understand each
-          other in a hospital or an emergency. It supports a small set of hospital signs and
-          phrases — and it says plainly when it does not know something.
-        </p>
+            <Link
+              href="/help"
+              className="inline-flex items-center gap-2.5 rounded-full px-3 py-2 text-xs sm:text-sm md:text-base font-semibold text-[#292D38] hover:text-[#3F5745] transition-colors"
+            >
+              <span className="flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-full bg-[#71856A] text-white shadow-xs">
+                <svg className="h-3.5 w-3.5 fill-current translate-x-0.5" viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M8 5v14l11-7z" />
+                </svg>
+              </span>
+              <span>Watch how it works</span>
+            </Link>
+          </div>
 
-        <p className="mt-4 flex max-w-2xl items-start gap-2 text-pretty text-sm text-muted">
-          <Icon name="alert" size="1.1rem" className="mt-0.5 shrink-0 text-warning" />
-          <span>
-            SignSpeak is a communication aid. It is not a medical device, it does not diagnose or
-            advise, and it does not replace a qualified ISL interpreter or emergency services. In an
-            emergency, call {config.emergencyNumber} and get staff.
-          </span>
-        </p>
+          {/* Trust Badges */}
+          <div className="mt-3 sm:mt-3.5 border-t border-[#D5C4A8]/80 pt-2 sm:pt-2.5">
+            <ul className="flex flex-wrap items-center gap-x-5 gap-y-1.5 text-xs sm:text-[13px] font-medium text-[#292D38]/85">
+              <li className="inline-flex items-center gap-1.5">
+                <Icon name="shield" size="1.05rem" className="text-[#292D38]" />
+                <span>Privacy conscious</span>
+              </li>
 
-        <div className="mt-7 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          <LinkButton href="/talk" size="lg" icon="users" block className="sm:col-span-2 lg:col-span-1">
-            Start conversation
-          </LinkButton>
-          <LinkButton href="/emergency" size="lg" variant="danger" icon="siren" block>
-            Emergency phrases
-          </LinkButton>
-          <LinkButton href="/phrases" size="lg" variant="secondary" icon="list" block>
-            Hospital phrases
-          </LinkButton>
-        </div>
+              <li className="inline-flex items-center gap-1.5">
+                <svg
+                  className="h-3.5 w-3.5 text-[#C77D60]"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden="true"
+                >
+                  <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+                </svg>
+                <span>Made for real people</span>
+              </li>
 
-        <div className="mt-5 flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-muted">
-          <span className="inline-flex items-center gap-2">
-            <Icon name="camera-off" size="1.1rem" />
-            Camera stays off until you start it
-          </span>
-          <span className="inline-flex items-center gap-2">
-            <Icon name="mic-off" size="1.1rem" />
-            Microphone stays off until you tap it
-          </span>
-          <span className="inline-flex items-center gap-2">
-            <Icon name="lock" size="1.1rem" />
-            Nothing is recorded or uploaded
-          </span>
+              <li className="inline-flex items-center gap-1.5">
+                <svg
+                  className="h-3.5 w-3.5 text-[#71856A]"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden="true"
+                >
+                  <path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z" />
+                  <path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12" />
+                </svg>
+                <span>Clear about limitations</span>
+              </li>
+            </ul>
+          </div>
+
+          {/* Standing safety statement note */}
+          <p className="mt-1.5 text-[11px] sm:text-xs text-[#292D38]/65 leading-tight">
+            <span className="font-semibold text-[#292D38]">SignSpeak is a communication aid</span>, not a medical device. In an emergency call{' '}
+            <strong className="text-[#292D38] font-semibold">{config.emergencyNumber}</strong>.
+          </p>
         </div>
       </div>
     </section>

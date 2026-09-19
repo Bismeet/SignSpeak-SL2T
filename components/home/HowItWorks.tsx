@@ -1,71 +1,74 @@
 'use client';
 
 /**
- * "How it works" explainer. Three steps, each paired with an icon and a text label, so
- * the meaning survives without colour and without audio.
+ * Wabi-Sabi & Doodle Art "How SignSpeak works" section.
+ *
+ * Uses the hand-drawn illustration (/how-it-works-wabi-sabi.png) explaining the
+ * 3-step conversation loop:
+ * 01. Sign or type (deaf user at camera, types, or picks phrase)
+ * 02. Speak or type (hearing person speaks or types)
+ * 03. Understand (reply shown as text or verified ISL clip)
+ * Plus the honest limitation notice and doodle details.
  */
 
-import { Card, Panel, SectionHeading } from '@/components/ui/Surface';
-import { Icon, type IconName } from '@/components/ui/Icon';
-
-interface Step {
-  icon: IconName;
-  title: string;
-  body: string;
-  tone: 'primary' | 'accent' | 'warning';
-}
-
-const STEPS: Step[] = [
-  {
-    icon: 'hand',
-    title: '1. The deaf user signs, taps or types',
-    body: 'Hold a supported sign in front of the camera, or pick a phrase from the hospital board. The recognised word appears as a chip with a confidence level you can confirm, correct or delete.',
-    tone: 'primary',
-  },
-  {
-    icon: 'mic',
-    title: '2. The hearing person speaks or types',
-    body: 'Speech is turned into an editable transcript, and typing is always available. Nothing is sent until the hearing person presses Send.',
-    tone: 'accent',
-  },
-  {
-    icon: 'video',
-    title: '3. The reply comes back as ISL or as clear text',
-    body: 'If a qualified ISL signer has verified a clip for that phrase, it plays with a "verified" badge. If not, SignSpeak shows the text in large type and says so — it never invents a sign.',
-    tone: 'warning',
-  },
-];
-
-const TONE_CLASS: Record<Step['tone'], string> = {
-  primary: 'bg-primary-soft text-primary',
-  accent: 'bg-accent-soft text-accent',
-  warning: 'bg-warning-soft text-warning',
-};
+import Image from 'next/image';
 
 export function HowItWorks() {
   return (
-    <section aria-labelledby="how-it-works-heading">
-      <SectionHeading
-        id="how-it-works-heading"
-        title="How a conversation works"
-        description="Three steps, in order, with a fallback at every stage."
-        icon="sparkles"
-      />
-      <ol className="mt-4 grid gap-3 md:grid-cols-3">
-        {STEPS.map((step) => (
-          <li key={step.title}>
-            <Card elevation="flat" className="h-full">
-              <Panel padding="md" className="flex h-full flex-col gap-3">
-                <span className={`inline-flex h-12 w-12 items-center justify-center rounded-2xl ${TONE_CLASS[step.tone]}`}>
-                  <Icon name={step.icon} size="1.6rem" />
-                </span>
-                <h3 className="text-lg font-semibold">{step.title}</h3>
-                <p className="text-pretty text-muted">{step.body}</p>
-              </Panel>
-            </Card>
-          </li>
-        ))}
-      </ol>
+    <section
+      id="how-it-works"
+      aria-labelledby="how-it-works-heading"
+      className="relative w-full bg-[#F1E8D8] pt-6 sm:pt-8 overflow-hidden transition-colors duration-200"
+    >
+      {/* Chapter Eyebrow Tag */}
+      <div className="mx-auto flex max-w-6xl items-center justify-center gap-3 px-4 pb-2">
+        <div className="h-[1px] w-10 sm:w-16 bg-[#D5C4A8]" />
+        <span className="font-serif text-xs uppercase tracking-widest text-[#3F5745] font-semibold">
+          Chapter 01 · The Three-Step Loop
+        </span>
+        <div className="h-[1px] w-10 sm:w-16 bg-[#D5C4A8]" />
+      </div>
+
+      {/* Full-bleed illustrated explainer graphic */}
+      <div className="w-full">
+
+        <Image
+          src="/how-it-works-wabi-sabi.png"
+          alt="How SignSpeak works: Three simple steps, one shared conversation. Step 1: Sign or type (The deaf user signs at the camera, types, or selects a phrase from the board). Step 2: Speak or type (The hearing person speaks or types and reviews the message). Step 3: Understand (The reply is shown as text or a verified ISL clip when available). Limitation note: Sign recognition and ISL videos are limited, and SignSpeak does not replace a qualified interpreter."
+          width={2048}
+          height={1024}
+          sizes="100vw"
+          className="w-full h-auto block"
+          priority
+        />
+
+      </div>
+
+
+
+        {/* Screen-reader accessible semantic transcript */}
+        <div className="sr-only">
+          <h2 id="how-it-works-heading">How SignSpeak works</h2>
+          <p>Three simple steps, one shared conversation.</p>
+          <ol>
+            <li>
+              <h3>01. Sign or type</h3>
+              <p>The deaf user signs at the camera, types, or selects a phrase from the board.</p>
+            </li>
+            <li>
+              <h3>02. Speak or type</h3>
+              <p>The hearing person speaks or types and reviews the message.</p>
+            </li>
+            <li>
+              <h3>03. Understand</h3>
+              <p>The reply is shown as text or a verified ISL clip when available.</p>
+            </li>
+          </ol>
+          <p>
+            We&apos;re honest about what&apos;s available: Sign recognition and ISL videos are limited, and
+            SignSpeak does not replace a qualified interpreter.
+          </p>
+        </div>
     </section>
   );
 }

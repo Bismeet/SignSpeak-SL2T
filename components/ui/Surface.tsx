@@ -16,6 +16,8 @@ export interface CardProps extends HTMLAttributes<HTMLDivElement> {
   elevation?: 'flat' | 'raised';
   /** Adds an accent bar on the inline start edge. */
   accent?: 'none' | 'primary' | 'danger' | 'success' | 'warning';
+  /** Lift the hairline border on hover — only for cards that are themselves clickable. */
+  interactive?: boolean;
   as?: ElementType;
 }
 
@@ -30,6 +32,7 @@ const ACCENTS: Record<NonNullable<CardProps['accent']>, string> = {
 export function Card({
   elevation = 'flat',
   accent = 'none',
+  interactive = false,
   as: Component = 'div',
   className,
   children,
@@ -38,8 +41,13 @@ export function Card({
   return (
     <Component
       className={cn(
-        'ss-bordered rounded-2xl bg-surface',
+        // A very shallow top-lit gradient rather than a flat fill: it reads as a panel
+        // with depth instead of a rectangle of colour, and collapses to flat white in
+        // the high-contrast theme (where surface and bg are both #fff).
+        'ss-bordered rounded-2xl bg-gradient-to-b from-surface to-bg',
         elevation === 'raised' ? 'shadow-lift' : 'shadow-card',
+        interactive &&
+          'transition-colors duration-150 hover:border-strong focus-within:border-strong',
         ACCENTS[accent],
         className,
       )}

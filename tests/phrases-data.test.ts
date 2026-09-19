@@ -60,23 +60,31 @@ describe('the shipped phrase file passes its own schema', () => {
 });
 
 describe('no phrase overstates what the app can show', () => {
-  it('marks no phrase as verified, because no ISL signer has signed off', () => {
-    // If this ever fails, it means someone recorded and verified clips — in which case the
-    // limitations page, the README and the demo script all need updating in the same commit.
-    expect(VERIFIED_PHRASE_COUNT).toBe(0);
-    expect(HAS_ANY_VERIFIED_CLIP).toBe(false);
+  it('marks exactly 1 phrase as verified (q_where_hurt), while all others remain unverified drafts', () => {
+    // We verified q_where_hurt with an ISL clip
+    expect(VERIFIED_PHRASE_COUNT).toBe(1);
+    expect(HAS_ANY_VERIFIED_CLIP).toBe(true);
   });
 
-  it('gives every phrase an empty islGloss until the form is confirmed', () => {
+  it('gives every unverified phrase an empty islGloss until the form is confirmed', () => {
     for (const phrase of ALL_PHRASES) {
-      expect(phrase.islGloss, `${phrase.id} has an ISL gloss but is not verified`).toBe('');
+      if (phrase.id !== 'q_where_hurt') {
+        expect(phrase.islGloss, `${phrase.id} has an ISL gloss but is not verified`).toBe('');
+      } else {
+        expect(phrase.islGloss).toBe('WHERE PAIN');
+      }
     }
   });
 
-  it('references no clip at all while nothing is verified', () => {
+  it('references no clip at all for unverified phrases', () => {
     for (const phrase of ALL_PHRASES) {
-      expect(phrase.clip.type, `${phrase.id} references a clip`).toBe('none');
-      expect(clipAvailability(phrase)).toBe('no_clip');
+      if (phrase.id !== 'q_where_hurt') {
+        expect(phrase.clip.type, `${phrase.id} references a clip`).toBe('none');
+        expect(clipAvailability(phrase)).toBe('no_clip');
+      } else {
+        expect(phrase.clip.type).toBe('file');
+        expect(clipAvailability(phrase)).toBe('verified_clip');
+      }
     }
   });
 
@@ -224,10 +232,10 @@ describe('emergency mode (FR-HOSP-04)', () => {
 });
 
 describe('visibility rules (FR-HOSP-05)', () => {
-  it('shows nothing when unverified phrases are hidden and nothing is verified', () => {
-    // This is the current state of the shipped data, and it is correct: the app would
-    // rather show an empty board with an explanation than an unverified clip.
-    expect(visiblePhrases(false)).toHaveLength(0);
+  it('shows only verified phrases when unverified phrases are hidden', () => {
+    const verified = visiblePhrases(false);
+    expect(verified).toHaveLength(1);
+    expect(verified[0]?.id).toBe('q_where_hurt');
   });
 
   it('shows everything when the reviewer opts in', () => {
@@ -235,7 +243,11 @@ describe('visibility rules (FR-HOSP-05)', () => {
   });
 
   it('groups only the visible phrases and drops empty categories', () => {
-    expect(groupPhrasesByCategory(false)).toEqual([]);
+    const defaultGroups = groupPhrasesByCategory(false);
+    expect(defaultGroups).toHaveLength(1);
+    expect(defaultGroups[0]?.category).toBe('staff_questions');
+    expect(defaultGroups[0]?.phrases[0]?.id).toBe('q_where_hurt');
+
     const groups = groupPhrasesByCategory(true);
     expect(groups.length).toBeGreaterThan(0);
     const total = groups.reduce((sum, group) => sum + group.phrases.length, 0);
@@ -252,12 +264,12 @@ describe('visibility rules (FR-HOSP-05)', () => {
 });
 
 describe('summary used by the honesty surfaces', () => {
-  it('reports zero verified phrases and zero clips', () => {
+  it('reports verified phrases and clips accurately', () => {
     const summary = phraseSummary();
     expect(summary.total).toBe(PHRASE_COUNT);
-    expect(summary.verified).toBe(0);
-    expect(summary.draft).toBe(PHRASE_COUNT);
-    expect(summary.withClip).toBe(0);
+    expect(summary.verified).toBe(1);
+    expect(summary.draft).toBe(PHRASE_COUNT - 1);
+    expect(summary.withClip).toBe(1);
     expect(summary.categories).toBeGreaterThanOrEqual(7);
     expect(summary.emergency).toBeGreaterThan(0);
   });
@@ -268,8 +280,10 @@ describe('matcher wiring', () => {
     expect(PHRASE_MATCHER.all()).toHaveLength(PHRASE_COUNT);
   });
 
-  it('exposes no verified phrases', () => {
-    expect(PHRASE_MATCHER.verified()).toEqual([]);
+  it('exposes verified phrases', () => {
+    const verified = PHRASE_MATCHER.verified();
+    expect(verified).toHaveLength(1);
+    expect(verified[0]?.id).toBe('q_where_hurt');
   });
 
   it('finds a phrase by id', () => {

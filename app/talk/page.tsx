@@ -1,36 +1,31 @@
 'use client';
 
 /**
- * Talk — the two-way conversation screen (docs/ui-ux-specification.md §3.2).
+ * Talk — the two-way Patient ↔ Doctor communication workspace (docs/ui-ux-specification.md §3.2,
+ * wireframe media_1789848449713.png).
  *
- * Desktop and tablet landscape: three columns — deaf user (camera + speak), conversation
- * feed, hearing user (speech/typing). Phone: tabs for Camera / Speak & Type with the feed
- * below, so nothing is squeezed and every control stays a thumb-sized target.
- *
- * This screen wires together every feature and is where the privacy and honesty rules
- * become concrete:
- *   - nothing is spoken until the user presses Speak (unless auto-speak is explicitly on);
- *   - a recognised word is added as a *reviewable* message, never as a settled fact;
- *   - a hearing user's message is matched against the curated phrase list, and the
- *     delivery mode ("ISL clip" or "text only") is recorded on the message.
+ * Layout:
+ * 1. Screen header: "Conversation", subtitle, session active status, and Hide/End actions.
+ * 2. Two main communication panels side-by-side:
+ *    - Patient panel: camera preview, start camera button, signing status, and text/phrase fallback.
+ *    - Doctor panel: 3D robot preview, five clinical phrase cards, selected phrase state, and Play Sign button.
+ * 3. Shared conversation transcript below:
+ *    - Distinct Patient and Doctor message styles with timestamps, badges, and review controls.
  */
 
 import { useCallback, useMemo, useRef, useState } from 'react';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
-import { Callout } from '@/components/ui/Callout';
-import { Dialog, ConfirmDialog } from '@/components/ui/Dialog';
+import { ConfirmDialog, Dialog } from '@/components/ui/Dialog';
 import { Icon } from '@/components/ui/Icon';
-import { Card, Panel, SectionHeading } from '@/components/ui/Surface';
 import { CameraPanel } from '@/components/camera/CameraPanel';
 import { ConversationFeed, TurnIndicator } from '@/components/conversation/ConversationFeed';
 import { CorrectionSheet } from '@/components/conversation/CorrectionSheet';
+import { DoctorPanel } from '@/components/conversation/DoctorPanel';
 import { ClipPlayer } from '@/components/phrases/ClipPlayer';
 import { PhraseBoard } from '@/components/phrases/PhraseBoard';
 import { SpeakControls } from '@/components/speech/SpeakControls';
-import { SpeechInputPanel } from '@/components/speech/SpeechInputPanel';
-import { PHRASE_MATCHER } from '@/lib/phrases/data';
-import { clipAvailability } from '@/lib/phrases/data';
+import { PHRASE_MATCHER, clipAvailability } from '@/lib/phrases/data';
 import { MATCH_METHOD_LABEL } from '@/lib/phrases/matcher';
 import { glossLabel } from '@/lib/signs/vocabulary';
 import { useAsr } from '@/lib/speech/use-asr';
@@ -44,24 +39,23 @@ import { createId } from '@/lib/utils/misc';
 import type { ConversationMessage, Phrase } from '@/lib/types';
 import { cn } from '@/lib/utils/cn';
 
-type MobileTab = 'camera' | 'speak';
-
 export default function TalkPage() {
   const { settings, update } = useSettings();
   const { state, dispatch, endConversation } = useConversation();
   const speaker = useSpeaker();
 
-  const [mobileTab, setMobileTab] = useState<MobileTab>('camera');
   const [phraseDrawerOpen, setPhraseDrawerOpen] = useState(false);
   const [correctionId, setCorrectionId] = useState<string | null>(null);
   const [activeClip, setActiveClip] = useState<Phrase | null>(null);
   const [confirmEnd, setConfirmEnd] = useState(false);
+  const [patientTypeOpen, setPatientTypeOpen] = useState(false);
+  const [patientText, setPatientText] = useState('');
   const [lastMatchNote, setLastMatchNote] = useState<string | null>(null);
 
   const latestRecognitionIdRef = useRef<string | null>(null);
 
   /* ---------------------------------------------------------------------------------
-   * Sign recognition -> conversation
+   * Patient Sign recognition -> conversation
    * ------------------------------------------------------------------------------- */
 
   const handleAccepted = useCallback(
@@ -96,13 +90,10 @@ export default function TalkPage() {
 
   const recognition = useSignRecognition({ onAccepted: handleAccepted });
 
-  const handleConfirmSign = useCallback(
-    () => {
-      const id = latestRecognitionIdRef.current;
-      if (id) dispatch({ type: 'confirmRecognition', id });
-    },
-    [dispatch],
-  );
+  const handleConfirmSign = useCallback(() => {
+    const id = latestRecognitionIdRef.current;
+    if (id) dispatch({ type: 'confirmRecognition', id });
+  }, [dispatch]);
 
   const handleCorrectSign = useCallback(() => {
     const id = latestRecognitionIdRef.current;
@@ -115,8 +106,23 @@ export default function TalkPage() {
     latestRecognitionIdRef.current = null;
   }, [dispatch]);
 
+  const handlePatientSendText = useCallback(() => {
+    if (!patientText.trim()) return;
+    dispatch({
+      type: 'add',
+      message: {
+        id: createId('msg'),
+        party: 'deaf_user',
+        source: 'typed',
+        text: patientText.trim(),
+      },
+    });
+    setPatientText('');
+    setPatientTypeOpen(false);
+  }, [patientText, dispatch]);
+
   /* ---------------------------------------------------------------------------------
-   * Hearing user input -> phrase match -> conversation
+   * Doctor input -> phrase match -> conversation
    * ------------------------------------------------------------------------------- */
 
   const asr = useAsr({
@@ -124,27 +130,22 @@ export default function TalkPage() {
     onLanguageChange: (language) => update('asrLanguage', language),
   });
 
-  const sendHearingMessage = useCallback(
-    (text: string, source: 'speech_recognition' | 'typed') => {
-      // Match against the whole curated list, not only the verified subset.
-      //
-      // `includeUnverified` gates whether a verified *clip* may be offered, and that gate is
-      // applied separately below through `clipAvailability`. It must not gate whether the app
-      // can recognise text the user has already typed. With it tied to the reviewer setting,
-      // and no clip verified yet, every phrase failed to match and the app told the user "no
-      // phrase in the curated list matches this" — for phrases that are in the list. Nothing
-      // unverified can reach the deaf user as ISL as a result, because the clip is still
-      // gated and the note says plainly that no verified video exists.
-      const match = PHRASE_MATCHER.match(text, { includeUnverified: true });
-      const phrase = match.matched ? match.phrase : null;
+  const sendDoctorMessage = useCallback(
+    (text: string, phraseArg?: Phrase) => {
+      const match = phraseArg
+        ? { matched: true, phrase: phraseArg, method: 'exact' as const, candidates: [] }
+        : PHRASE_MATCHER.match(text, { includeUnverified: true });
+
+      const phrase = phraseArg ?? (match.matched ? match.phrase : null);
       const availability = phrase ? clipAvailability(phrase) : null;
       const mode = availability === 'verified_clip' ? 'isl_clip' : 'text_only';
 
       dispatch({
         type: 'add',
         message: {
+          id: createId('msg'),
           party: 'hearing_user',
-          source,
+          source: phraseArg ? 'phrase_board' : 'speech_recognition',
           text,
           delivery: {
             mode,
@@ -154,20 +155,16 @@ export default function TalkPage() {
       });
 
       if (phrase) {
-        setActiveClip(phrase);
         setLastMatchNote(
           `${MATCH_METHOD_LABEL[match.method]} — “${phrase.textEn}”. ${
             mode === 'isl_clip'
-              ? 'A verified ISL video is shown to the deaf user.'
+              ? 'A verified ISL video is shown to the patient.'
               : 'No verified ISL video exists for this phrase, so it is shown as text only.'
           }`,
         );
       } else {
-        setActiveClip(null);
         setLastMatchNote(
-          match.candidates.length > 0 && match.candidates[0]
-            ? `No exact match. The closest phrase was “${match.candidates[0].phrase.textEn}”. Nothing was invented — the text is shown as written.`
-            : 'No phrase in the curated list matches this. The text is shown as written, with the “no verified ISL video” notice.',
+          'No phrase in the curated list matches this. The text is shown as written, with the “no verified ISL video” notice.',
         );
       }
     },
@@ -185,6 +182,7 @@ export default function TalkPage() {
       dispatch({
         type: 'add',
         message: {
+          id: createId('msg'),
           party: phrase.speaker === 'hearing_user' ? 'hearing_user' : 'deaf_user',
           source: 'phrase_board',
           text: phrase.textEn,
@@ -216,11 +214,6 @@ export default function TalkPage() {
     [state.messages, correctionId],
   );
 
-  /**
-   * Opt-in local correction log (docs/privacy-and-safety.md §3). Writes the landmark
-   * feature vector that produced a wrong prediction, with the corrected label, into this
-   * browser's IndexedDB only. Never images, never text, never transmitted.
-   */
   const logCorrection = useCallback(
     (correctedLabel: string) => {
       if (!settings.logLandmarksLocally) return;
@@ -241,253 +234,304 @@ export default function TalkPage() {
     (message) => message.recognition && !message.recognition.reviewed,
   ).length;
 
-  /* ---------------------------------------------------------------------------------
-   * Panels
-   * ------------------------------------------------------------------------------- */
-
-  const cameraPanel = (
-    <div className="space-y-4">
-      <CameraPanel
-        recognition={recognition}
-        onConfirm={handleConfirmSign}
-        onCorrect={handleCorrectSign}
-        onReject={handleRejectSign}
-        onOpenPhraseBoard={() => setPhraseDrawerOpen(true)}
-      />
-
-      <Card elevation="flat">
-        <Panel padding="md">
-          <SpeakControls
-            speaker={speaker}
-            text={composedText}
-            label="Speak everything you have said"
-            showLanguageSelector={false}
-            onSpoken={() => {
-              for (const message of state.messages) {
-                if (message.party === 'deaf_user') {
-                  dispatch({ type: 'markSpoken', id: message.id, spoken: true });
-                }
-              }
-            }}
-          />
-        </Panel>
-      </Card>
-    </div>
-  );
-
-  const hearingPanel = (
-    <div className="space-y-4">
-      <Card elevation="flat">
-        <Panel padding="md">
-          <SpeechInputPanel
-            asr={asr}
-            onSend={sendHearingMessage}
-            onAfterSend={() => setMobileTab('camera')}
-          />
-        </Panel>
-      </Card>
-
-      {lastMatchNote ? (
-        <Callout
-          tone="neutral"
-          icon="info"
-          title="What the deaf user sees"
-          actions={
-            <Button size="sm" variant="ghost" icon="x" onClick={() => setLastMatchNote(null)}>
-              Dismiss
-            </Button>
-          }
-        >
-          {lastMatchNote}
-        </Callout>
-      ) : null}
-    </div>
-  );
-
   return (
-    <div className="mx-auto w-full max-w-7xl px-3 py-5 sm:px-5 sm:py-6">
-      {/* Screen header */}
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <SectionHeading
-          level={1}
-          title="Conversation"
-          description="One shared record. Messages stay in this browser tab only and are cleared when you end the conversation or reload."
-          icon="users"
-        />
-        <div className="flex flex-wrap items-center gap-2">
+    <div className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6 sm:py-8 space-y-6">
+      {/* Page Header matching wireframe */}
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-[#292D38]">
+            Conversation
+          </h1>
+          <p className="mt-1 text-sm sm:text-base font-medium text-[#71856A]">
+            Patient ↔ Doctor · Two-way communication
+          </p>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+          {/* Session active pill */}
+          <div className="inline-flex items-center gap-1.5 rounded-full border border-[#71856A]/30 bg-[#E3EADF] px-3.5 py-1.5 text-xs font-semibold text-[#3F5745]">
+            <span className="h-2 w-2 rounded-full bg-[#596F57] animate-pulse" />
+            <span>Session active</span>
+          </div>
+
           <Button
             variant="secondary"
+            size="sm"
             icon={state.hidden ? 'eye' : 'eye-off'}
             onClick={() => dispatch({ type: 'setHidden', hidden: !state.hidden })}
             aria-pressed={state.hidden}
+            className="rounded-xl border-[#D8CFBA] bg-[#FAF6EE] text-[#292D38] hover:bg-[#F4EFEA]"
           >
-            {state.hidden ? 'Show conversation' : 'Hide conversation'}
+            {state.hidden ? 'Show' : 'Hide'}
           </Button>
-          <Button variant="danger" icon="stop" onClick={() => setConfirmEnd(true)}>
+
+          <Button
+            variant="danger"
+            size="sm"
+            icon="stop"
+            onClick={() => setConfirmEnd(true)}
+            className="rounded-xl"
+          >
             End conversation
           </Button>
         </div>
       </div>
 
-      <div className="mt-4 flex flex-wrap items-center gap-2">
+      {/* Subtle status badges */}
+      <div className="flex flex-wrap items-center gap-2 text-xs">
         <Badge tone="neutral" icon="list">
           {state.messages.length} message{state.messages.length === 1 ? '' : 's'}
         </Badge>
         {unreviewed > 0 ? (
           <Badge tone="warning" icon="alert">
-            {unreviewed} recognised word{unreviewed === 1 ? '' : 's'} not yet confirmed
+            {unreviewed} sign{unreviewed === 1 ? '' : 's'} not yet confirmed
           </Badge>
         ) : null}
         <Badge tone="neutral" icon="lock">
-          Nothing stored or uploaded
+          Private · On-device only
         </Badge>
       </div>
 
-      {/* Phone tabs */}
-      <div className="mt-4 lg:hidden">
-        <div role="tablist" aria-label="Input mode" className="flex gap-2">
-          {(
-            [
-              { id: 'camera' as const, label: 'Deaf user — sign', icon: 'camera' as const },
-              { id: 'speak' as const, label: 'Hearing user — speak', icon: 'mic' as const },
-            ]
-          ).map((tab) => (
+      {/* Two Main Communication Panels */}
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-2 items-start">
+        {/* Left Panel: Patient */}
+        <div className="flex flex-col justify-between rounded-3xl border border-[#D8CFBA] bg-[#FAF6EE]/90 p-5 shadow-xs transition-shadow hover:shadow-sm">
+          <div className="space-y-4">
+            {/* Card Header */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 font-bold text-lg text-[#292D38]">
+                <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#E3EADF] text-[#3F5745]">
+                  <Icon name="hand" size="1.15rem" />
+                </div>
+                <span>Patient</span>
+              </div>
+
+              {recognition.camera === 'streaming' ||
+              recognition.camera === 'paused' ||
+              recognition.preparing ? (
+                <div className="flex items-center gap-2">
+                  <span className="flex items-center gap-1.5 text-xs font-semibold text-[#596F57]">
+                    <span
+                      className={cn(
+                        'h-2 w-2 rounded-full',
+                        recognition.camera === 'streaming'
+                          ? 'bg-[#596F57] animate-pulse'
+                          : 'bg-[#C77D60] animate-pulse',
+                      )}
+                    />
+                    {recognition.camera === 'streaming'
+                      ? 'Camera Live'
+                      : recognition.preparing
+                        ? 'Starting…'
+                        : 'Camera Paused'}
+                  </span>
+                  <Button
+                    size="sm"
+                    variant="danger"
+                    icon="camera-off"
+                    onClick={() => recognition.stop()}
+                    className="!py-1 !px-2.5 text-xs rounded-xl"
+                  >
+                    Stop camera
+                  </Button>
+                </div>
+              ) : null}
+            </div>
+
+            {/* Camera Preview / Video Feed */}
+            <CameraPanel
+              recognition={recognition}
+              onConfirm={handleConfirmSign}
+              onCorrect={handleCorrectSign}
+              onReject={handleRejectSign}
+              onOpenPhraseBoard={() => setPhraseDrawerOpen(true)}
+              layout="workspace"
+            />
+
+            {/* Speak Controls for Patient if composed words exist */}
+            {composedText ? (
+              <div className="rounded-2xl border border-[#D8CFBA]/70 bg-[#F4EFEA]/80 p-3">
+                <SpeakControls
+                  speaker={speaker}
+                  text={composedText}
+                  label="Speak recognized signing"
+                  showLanguageSelector={false}
+                  onSpoken={() => {
+                    for (const message of state.messages) {
+                      if (message.party === 'deaf_user') {
+                        dispatch({ type: 'markSpoken', id: message.id, spoken: true });
+                      }
+                    }
+                  }}
+                />
+              </div>
+            ) : null}
+
+            {/* Collapsible Patient Type Fallback */}
+            {patientTypeOpen ? (
+              <div className="rounded-2xl border border-[#D8CFBA] bg-[#FAF6EE] p-3 space-y-2">
+                <p className="text-xs font-semibold text-[#71856A]">Type a message:</p>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={patientText}
+                    onChange={(e) => setPatientText(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') handlePatientSendText();
+                    }}
+                    placeholder="Type what you want to say…"
+                    className="flex-1 rounded-xl border border-[#D8CFBA] bg-white px-3 py-2 text-sm text-[#292D38] focus:outline-none focus:ring-2 focus:ring-[#596F57]/40"
+                    autoFocus
+                  />
+                  <Button
+                    size="sm"
+                    variant="primary"
+                    onClick={handlePatientSendText}
+                    disabled={!patientText.trim()}
+                    className="!bg-[#596F57] text-white rounded-xl px-4"
+                  >
+                    Send
+                  </Button>
+                </div>
+              </div>
+            ) : null}
+          </div>
+
+          {/* Patient Card Footer matching wireframe */}
+          <div className="mt-5 pt-3 border-t border-[#D8CFBA]/60 flex flex-wrap items-center justify-between gap-2 text-xs text-[#71856A]">
+            <span className="font-medium">Sign · Type · Select phrase</span>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setPatientTypeOpen((prev) => !prev)}
+                className="font-semibold text-[#596F57] hover:underline cursor-pointer"
+              >
+                {patientTypeOpen ? 'Close type' : 'Type fallback'}
+              </button>
+              <span>·</span>
+              <button
+                type="button"
+                onClick={() => setPhraseDrawerOpen(true)}
+                className="font-semibold text-[#596F57] hover:underline cursor-pointer"
+              >
+                Phrase board
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Right Panel: Doctor */}
+        <div className="flex flex-col justify-between rounded-3xl border border-[#D8CFBA] bg-[#FAF6EE]/90 p-5 shadow-xs transition-shadow hover:shadow-sm">
+          <div className="space-y-4">
+            {/* Card Header */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 font-bold text-lg text-[#292D38]">
+                <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#F7E5DE] text-[#C77D60]">
+                  <Icon name="stethoscope" size="1.15rem" />
+                </div>
+                <span>Doctor</span>
+              </div>
+
+              {asr.listening ? (
+                <span className="flex items-center gap-1.5 text-xs font-semibold text-[#C77D60]">
+                  <span className="h-2 w-2 rounded-full bg-[#C77D60] animate-pulse" />
+                  Mic Listening
+                </span>
+              ) : null}
+            </div>
+
+            {/* Doctor Panel Component */}
+            <DoctorPanel
+              onSendMessage={sendDoctorMessage}
+              onOpenPhraseBoard={() => setPhraseDrawerOpen(true)}
+              asr={asr}
+            />
+          </div>
+
+          {/* Doctor Card Footer matching wireframe */}
+          <div className="mt-5 pt-3 border-t border-[#D8CFBA]/60 flex flex-wrap items-center justify-between gap-2 text-xs text-[#71856A]">
+            <span className="font-medium">Select · Preview · Play animation</span>
             <button
-              key={tab.id}
               type="button"
-              role="tab"
-              aria-selected={mobileTab === tab.id}
-              aria-controls={`panel-${tab.id}`}
-              id={`tab-${tab.id}`}
-              onClick={() => setMobileTab(tab.id)}
-              className={cn(
-                'inline-flex min-h-touch flex-1 items-center justify-center gap-2 rounded-xl border px-3 font-semibold',
-                mobileTab === tab.id
-                  ? 'border-primary bg-primary-soft text-primary'
-                  : 'border-strong bg-surface text-muted',
-              )}
+              onClick={() => setPhraseDrawerOpen(true)}
+              className="font-semibold text-[#596F57] hover:underline cursor-pointer"
             >
-              <Icon name={tab.icon} size="1.15rem" />
-              {tab.label}
+              All hospital phrases
             </button>
-          ))}
+          </div>
         </div>
       </div>
 
-      {/* Main layout */}
-      <div className="mt-4 grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.35fr)_minmax(0,1fr)]">
-        {/* Deaf user column */}
-        <section
-          id="panel-camera"
-          role="tabpanel"
-          aria-labelledby="tab-camera"
-          className={cn('space-y-4', mobileTab !== 'camera' && 'hidden lg:block')}
-        >
-          <h2 className="hidden items-center gap-2 text-lg font-semibold lg:flex">
-            <Icon name="hand" size="1.25rem" className="text-primary" />
-            Deaf user
-          </h2>
-          {cameraPanel}
-        </section>
-
-        {/* Conversation column */}
-        <section className="space-y-4">
-          <h2 className="flex items-center gap-2 text-lg font-semibold">
-            <Icon name="list" size="1.25rem" className="text-primary" />
-            Shared conversation
-          </h2>
-
-          {activeClip ? (
-            <Card elevation="raised" accent="primary">
-              <Panel padding="md">
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <p className="font-semibold">
-                      Reply for the deaf user: “{activeClip.textEn}”
-                    </p>
-                    <p className="mt-1 text-sm text-muted">
-                      {clipAvailability(activeClip) === 'verified_clip'
-                        ? 'A verified ISL clip is available and is playing below.'
-                        : 'No verified ISL video exists for this phrase, so it is shown as text only.'}
-                    </p>
-                  </div>
-                  <Button variant="ghost" size="sm" icon="x" onClick={() => setActiveClip(null)}>
-                    Close
-                  </Button>
-                </div>
-                <div className="mt-3">
-                  <ClipPlayer phrase={activeClip} />
-                </div>
-              </Panel>
-            </Card>
-          ) : null}
-
-          <Card elevation="flat">
-            <Panel padding="md">
-              <ConversationFeed
-                messages={state.messages}
-                hidden={state.hidden}
-                onEdit={(id, text) => dispatch({ type: 'setText', id, text })}
-                onDelete={(id) => dispatch({ type: 'delete', id })}
-                onMove={(id, direction) => dispatch({ type: 'move', id, direction })}
-                onToggleMisunderstood={(id) => dispatch({ type: 'toggleMisunderstood', id })}
-                onCorrectRecognition={(id) => setCorrectionId(id)}
-                onSpeak={speakMessage}
-                onPlayClip={(message) => {
-                  const phrase = message.delivery?.phraseId
-                    ? PHRASE_MATCHER.all().find((entry) => entry.id === message.delivery?.phraseId)
-                    : undefined;
-                  if (phrase) setActiveClip(phrase);
-                }}
-              />
-            </Panel>
-            <TurnIndicator
-              activeParty={state.activeParty}
-              cameraActive={recognition.camera === 'streaming'}
-              micActive={asr.listening}
-            />
-          </Card>
-
-          <div className="flex flex-wrap gap-2">
-            <Button variant="secondary" icon="list" onClick={() => setPhraseDrawerOpen(true)}>
-              Phrase board
-            </Button>
-            <Button
-              variant="ghost"
-              icon="trash"
-              disabled={state.messages.length === 0}
-              onClick={() => dispatch({ type: 'clear' })}
-            >
-              Clear messages
-            </Button>
+      {/* Shared Conversation Transcript below */}
+      <div className="rounded-3xl border border-[#D8CFBA] bg-[#FAF6EE]/90 p-5 shadow-xs space-y-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <h2 className="text-lg font-bold text-[#292D38]">Shared conversation</h2>
+            <span className="text-xs font-medium text-muted">
+              ({state.messages.length} message{state.messages.length === 1 ? '' : 's'})
+            </span>
           </div>
-        </section>
 
-        {/* Hearing user column */}
-        <section
-          id="panel-speak"
-          role="tabpanel"
-          aria-labelledby="tab-speak"
-          className={cn('space-y-4', mobileTab !== 'speak' && 'hidden lg:block')}
-        >
-          <h2 className="hidden items-center gap-2 text-lg font-semibold lg:flex">
-            <Icon name="mic" size="1.25rem" className="text-accent" />
-            Hearing user
-          </h2>
-          {hearingPanel}
-        </section>
+          <div className="flex items-center gap-2">
+            <span className="rounded-full border border-[#D8CFBA] bg-[#E7E2D6] px-2.5 py-1 text-xs font-semibold text-[#596F57]">
+              Transcript
+            </span>
+            {state.messages.length > 0 ? (
+              <Button
+                variant="ghost"
+                size="sm"
+                icon="trash"
+                onClick={() => dispatch({ type: 'clear' })}
+                className="text-xs"
+              >
+                Clear
+              </Button>
+            ) : null}
+          </div>
+        </div>
+
+        {/* Conversation Feed */}
+        <ConversationFeed
+          messages={state.messages}
+          hidden={state.hidden}
+          onEdit={(id, text) => dispatch({ type: 'setText', id, text })}
+          onDelete={(id) => dispatch({ type: 'delete', id })}
+          onMove={(id, direction) => dispatch({ type: 'move', id, direction })}
+          onToggleMisunderstood={(id) => dispatch({ type: 'toggleMisunderstood', id })}
+          onCorrectRecognition={(id) => setCorrectionId(id)}
+          onSpeak={speakMessage}
+          onPlayClip={(message) => {
+            const phrase = message.delivery?.phraseId
+              ? PHRASE_MATCHER.all().find((entry) => entry.id === message.delivery?.phraseId)
+              : undefined;
+            if (phrase) setActiveClip(phrase);
+          }}
+        />
+
+        {/* Turn Indicator */}
+        <TurnIndicator
+          activeParty={state.activeParty}
+          cameraActive={recognition.camera === 'streaming'}
+          micActive={asr.listening}
+          className="rounded-xl border border-[#D8CFBA]/60 bg-[#F4EFEA]/80"
+        />
       </div>
 
-      {/* Phrase board drawer */}
+      {/* Hospital phrase board sheet */}
       <Dialog
         open={phraseDrawerOpen}
         onClose={() => setPhraseDrawerOpen(false)}
         variant="sheet"
         title="Hospital phrase board"
-        description="Pick a phrase to speak and add to the conversation. Works without the camera."
+        description="Pick a phrase to speak or present in the conversation."
         className="sm:max-w-4xl"
         footer={
-          <Button variant="secondary" block icon="arrow-left" onClick={() => setPhraseDrawerOpen(false)}>
+          <Button
+            variant="secondary"
+            block
+            icon="arrow-left"
+            onClick={() => setPhraseDrawerOpen(false)}
+          >
             Back to conversation
           </Button>
         }
@@ -495,11 +539,14 @@ export default function TalkPage() {
         <PhraseBoard
           showUnverified={settings.showUnverifiedPhrases}
           speaker={speaker}
-          onAddToConversation={addPhraseToConversation}
+          onAddToConversation={(phrase) => {
+            addPhraseToConversation(phrase);
+            setPhraseDrawerOpen(false);
+          }}
         />
       </Dialog>
 
-      {/* Correction sheet */}
+      {/* Correction sheet for sign recognition */}
       <CorrectionSheet
         open={correctionId !== null}
         message={correctionMessage}
@@ -516,7 +563,7 @@ export default function TalkPage() {
         onDelete={(id) => dispatch({ type: 'delete', id })}
       />
 
-      {/* End conversation */}
+      {/* End conversation dialog */}
       <ConfirmDialog
         open={confirmEnd}
         onClose={() => setConfirmEnd(false)}
@@ -529,15 +576,28 @@ export default function TalkPage() {
           setActiveClip(null);
         }}
         title="End this conversation?"
-        description="Everything in this conversation is deleted from memory. SignSpeak never stored it anywhere else, so it cannot be recovered."
+        description="Everything in this conversation is deleted from memory. SignSpeak never stores it anywhere else, so it cannot be recovered."
         confirmLabel="End and delete"
         destructive
       >
         <p className="text-muted">
           {state.messages.length} message{state.messages.length === 1 ? '' : 's'} will be removed.
-          The camera and microphone are also stopped.
+          The camera and microphone will also stop.
         </p>
       </ConfirmDialog>
+
+      {/* Replay clip dialog if triggered from transcript */}
+      {activeClip ? (
+        <Dialog
+          open={true}
+          onClose={() => setActiveClip(null)}
+          title={`ISL Video: “${activeClip.textEn}”`}
+        >
+          <div className="space-y-3 p-2">
+            <ClipPlayer phrase={activeClip} autoPlay={true} />
+          </div>
+        </Dialog>
+      ) : null}
     </div>
   );
 }

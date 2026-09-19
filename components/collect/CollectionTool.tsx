@@ -571,7 +571,7 @@ export function CollectionTool() {
             </div>
           ) : (
             <div className="space-y-3">
-              <div className="relative overflow-hidden rounded-2xl border border-line bg-ink/90 aspect-camera">
+              <div className="relative overflow-hidden rounded-2xl border border-line bg-black aspect-camera">
                 <video
                   ref={videoRef}
                   playsInline

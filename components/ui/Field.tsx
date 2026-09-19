@@ -235,7 +235,7 @@ export function ToggleField({
         onClick={() => onChange(!checked)}
         className={cn(
           'relative mt-0.5 inline-flex h-8 w-14 shrink-0 items-center rounded-full border transition-colors duration-150',
-          checked ? 'border-primary bg-primary' : 'border-strong bg-raised',
+          checked ? 'border-primary bg-primary-solid' : 'border-strong bg-raised',
           disabled && 'cursor-not-allowed opacity-60',
         )}
       >

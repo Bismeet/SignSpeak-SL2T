@@ -21,30 +21,49 @@ export type ButtonVariant =
   | 'subtle'
   | 'ghost'
   | 'danger'
+  | 'danger-soft'
   | 'emergency'
   | 'success';
 
 export type ButtonSize = 'sm' | 'md' | 'lg' | 'xl' | 'emergency';
 
+/**
+ * The hierarchy is deliberate and must stay readable as three distinct tiers:
+ *
+ *   primary     solid medical blue — exactly one per view
+ *   danger-soft tinted rose — high urgency without competing for the same attention
+ *               as the primary fill (this is what the Home hero's Emergency action uses)
+ *   secondary   translucent raised surface — the quiet default for everything else
+ *   ghost       no chrome until hover — dismiss/back affordances
+ *   danger      solid rose — destructive confirmation only
+ *   emergency   the largest solid target, for the Emergency board itself
+ */
 const VARIANTS: Record<ButtonVariant, string> = {
   primary:
-    'bg-primary text-primary-ink border border-transparent hover:bg-primary-strong active:bg-primary-strong shadow-card',
+    'bg-primary-solid text-primary-ink border border-transparent hover:bg-primary-strong active:bg-primary-strong shadow-lg shadow-primary-solid/25',
   secondary:
-    'bg-surface text-ink border border-strong hover:bg-raised active:bg-raised shadow-card',
-  subtle: 'bg-primary-soft text-primary border border-transparent hover:border-primary',
-  ghost: 'bg-transparent text-ink border border-transparent hover:bg-raised',
-  danger: 'bg-danger text-danger-ink border border-transparent hover:bg-danger-strong shadow-card',
+    'bg-raised/60 text-ink border border-line hover:bg-raised hover:border-strong active:bg-raised',
+  subtle: 'bg-primary-soft text-primary border border-primary/25 hover:border-primary/60',
+  ghost:
+    'bg-transparent text-muted border border-transparent hover:bg-raised/70 hover:text-ink active:bg-raised',
+  danger:
+    'bg-danger-solid text-danger-ink border border-transparent hover:bg-danger-strong active:bg-danger-strong shadow-card',
+  // The hover/active tints eat into the text contrast: `text-danger` on `bg-danger/20` measured
+  // 4.08:1 in the light theme. Darkening the text to `-hover` (which is lighter, not darker, in
+  // the dark theme) keeps every state above 4.5:1 — see docs/implementation-decisions.md D-28.
+  'danger-soft':
+    'bg-danger/10 text-danger border border-danger/30 hover:bg-danger/20 hover:text-danger-hover active:bg-danger/25 active:text-danger-hover',
   emergency:
-    'bg-danger text-danger-ink border border-transparent hover:bg-danger-strong shadow-lift',
-  success: 'bg-success text-success-ink border border-transparent hover:brightness-110 shadow-card',
+    'bg-danger-solid text-danger-ink border border-transparent hover:bg-danger-strong shadow-lift',
+  success: 'bg-success-solid text-success-ink border border-transparent hover:brightness-110 shadow-card',
 };
 
 const SIZES: Record<ButtonSize, string> = {
-  sm: 'min-h-[2.5rem] px-3 text-sm gap-1.5 rounded-xl',
-  md: 'min-h-touch px-4 text-base gap-2 rounded-2xl',
-  lg: 'min-h-[3.5rem] px-5 text-lg gap-2.5 rounded-2xl',
+  sm: 'min-h-[2.5rem] px-3 text-sm gap-1.5 rounded-lg',
+  md: 'min-h-touch px-4 text-base gap-2 rounded-xl',
+  lg: 'min-h-[3.5rem] px-6 text-lg gap-2.5 rounded-xl',
   xl: 'min-h-[4.5rem] px-6 text-xl gap-3 rounded-2xl',
-  emergency: 'min-h-emergency px-6 text-2xl gap-3 rounded-3xl',
+  emergency: 'min-h-emergency px-6 text-2xl gap-3 rounded-2xl',
 };
 
 export interface ButtonBaseProps {

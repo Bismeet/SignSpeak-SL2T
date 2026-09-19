@@ -130,7 +130,7 @@ export function Dialog({
     >
       {/* Backdrop. `aria-hidden` because the dialog itself carries the semantics. */}
       <div
-        className="absolute inset-0 bg-ink/55 backdrop-blur-[2px] animate-fade-in"
+        className="absolute inset-0 bg-black/60 backdrop-blur-sm animate-fade-in"
         aria-hidden="true"
         onClick={closeOnBackdrop ? onClose : undefined}
       />
@@ -144,8 +144,8 @@ export function Dialog({
         className={cn(
           'relative z-10 flex max-h-[92dvh] w-full flex-col overflow-hidden bg-surface shadow-lift',
           variant === 'sheet'
-            ? 'rounded-t-3xl sm:max-w-xl sm:rounded-3xl'
-            : 'rounded-3xl sm:max-w-xl',
+            ? 'rounded-t-2xl sm:max-w-xl sm:rounded-2xl'
+            : 'rounded-2xl sm:max-w-xl',
           className,
         )}
       >
