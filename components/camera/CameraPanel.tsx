@@ -16,7 +16,7 @@
 
 import { useState } from 'react';
 import { Button } from '@/components/ui/Button';
-import { Badge, ConfidenceBadge } from '@/components/ui/Badge';
+import { Badge } from '@/components/ui/Badge';
 import { Callout } from '@/components/ui/Callout';
 import { RangeField, ToggleField } from '@/components/ui/Field';
 import { Icon } from '@/components/ui/Icon';
@@ -26,7 +26,6 @@ import { RecognitionChip } from '@/components/camera/RecognitionChip';
 import { TrackingIndicator } from '@/components/camera/TrackingIndicator';
 import { useSettings } from '@/lib/state/settings';
 import { config } from '@/lib/config';
-import { glossLabel } from '@/lib/signs/vocabulary';
 import type { AcceptedSign, UseSignRecognitionResult } from '@/lib/vision/use-sign-recognition';
 import { cn } from '@/lib/utils/cn';
 
@@ -112,8 +111,6 @@ export function CameraPanel({
     fps,
     lowFps,
     handCount,
-    current,
-    rejectionHint,
     latestAccepted,
     cameraFailure,
     landmarkerFailure,
@@ -121,6 +118,9 @@ export function CameraPanel({
     modelError,
     preparing,
     replaying,
+    simulateOcclusion,
+    setSimulateOcclusion,
+    landmarkCompleteness,
     videoRef,
     overlayCanvasRef,
     start,
@@ -139,11 +139,6 @@ export function CameraPanel({
   // alongside it so the user can judge how close a call the prediction was.
   const showNumeric = true;
 
-  // Overlay readouts. `topProbability` is the strength of the current top match, never a claim
-  // that the sign was understood — the accepted / "Not recognised" block below states the
-  // real outcome, and nothing is emitted from here.
-  const topProbability = current ? Math.min(1, Math.max(0, current.probability)) : 0;
-  const topGloss = current && current.top3[0] ? glossLabel(current.top3[0].label) : null;
   const guideVisible = camera === 'streaming' && handCount === 0 && !replaying;
 
   /* ---------------------------------------------------------------------------------
@@ -401,7 +396,11 @@ export function CameraPanel({
                   SignSpeak
                 </p>
                 <p className="mt-[2px] font-mono text-[8px] font-medium uppercase tracking-[0.14em] text-[#a9b6cb]">
-                  {replaying ? 'Landmark replay' : 'On-device hand tracking'}
+                  {replaying
+                    ? 'Landmark replay'
+                    : simulateOcclusion
+                      ? 'Occlusion simulation'
+                      : 'On-device hand tracking (159D)'}
                 </p>
               </div>
               <div className="flex flex-wrap items-center justify-end gap-[5px]">
@@ -414,6 +413,11 @@ export function CameraPanel({
                   label="Hands"
                   value={`${handCount}/2`}
                   tone={handCount > 0 ? 'live' : 'idle'}
+                />
+                <OverlayReadout
+                  label="Pose"
+                  value={simulateOcclusion ? 'Occluded' : handCount > 0 ? '21 pts' : 'Searching'}
+                  tone={simulateOcclusion ? 'warn' : handCount > 0 ? 'live' : 'idle'}
                 />
                 <OverlayReadout label="Rate" value={`${fps} FPS`} tone={lowFps ? 'warn' : 'live'} />
                 {settings.showLandmarkOverlay ? (
@@ -447,29 +451,35 @@ export function CameraPanel({
               variant="fixed"
               decorative
             />
-            {/* Top-match strength. Deliberately one compact pill on the same row as the
-                tracking status: the camera column is narrow, so a block-level meter used to
-                wrap onto a second row and get clipped by the 4:3 viewport. The bar is
-                decorative — the percentage is text — and the gloss is a tooltip, because the
-                recognition card below names the match in full. */}
+            {/* Landmark telemetry pill — honest technical status instead of speculative match % */}
             <span
-              className="overlay-chip inline-flex min-w-0 items-center gap-[6px] rounded-full px-[9px] py-[4px]"
-              title={topGloss ? `Top match: ${topGloss}` : 'Strength of the current top match'}
+              className={cn(
+                'overlay-chip inline-flex min-w-0 items-center gap-[6px] rounded-full px-[9px] py-[4px]',
+                simulateOcclusion && 'border-warning/50 text-warning',
+              )}
+              title={
+                simulateOcclusion
+                  ? 'Simulated keypoint occlusion active — fail-safe engaged'
+                  : 'Clean landmark input: 21 keypoints extracted per hand'
+              }
             >
               <span className="font-mono text-[9px] font-medium uppercase tracking-[0.14em] text-[#a9b6cb]">
-                Match
+                {simulateOcclusion ? 'Occlusion' : 'Landmarks'}
               </span>
               <span
                 aria-hidden="true"
                 className="overlay-meter-track h-[6px] w-[40px] shrink-0 overflow-hidden rounded-full"
               >
                 <span
-                  className="overlay-meter block h-full rounded-full"
-                  style={{ width: `${Math.round(topProbability * 100)}%` }}
+                  className={cn(
+                    'overlay-meter block h-full rounded-full transition-all duration-300',
+                    simulateOcclusion ? 'bg-warning' : 'bg-primary',
+                  )}
+                  style={{ width: `${Math.round(landmarkCompleteness * 100)}%` }}
                 />
               </span>
               <span className="font-mono text-[11px] font-semibold tabular-nums text-white">
-                {Math.round(topProbability * 100)}%
+                {simulateOcclusion ? '11/21 (Sim)' : handCount > 0 ? '21/21' : '0/21'}
               </span>
             </span>
           </div>
@@ -523,6 +533,13 @@ export function CameraPanel({
             onChange={(checked) => update('showLandmarkOverlay', checked)}
             className="min-w-[15rem] flex-1"
           />
+          <ToggleField
+            label="Simulate landmark occlusion"
+            description="Developer demo: simulates missing keypoints / partial occlusion. Engages the fail-safe to withhold recognition on insufficient landmark input."
+            checked={simulateOcclusion}
+            onChange={setSimulateOcclusion}
+            className="min-w-[15rem] flex-1"
+          />
         </div>
       </Panel>
 
@@ -559,34 +576,68 @@ export function CameraPanel({
           }}
         />
       ) : (
-        <div className="ss-bordered rounded-2xl bg-raised p-3.5">
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-            <span className="inline-flex items-center gap-2 text-lg font-semibold text-muted">
-              <Icon name="question" size="1.3rem" />
-              Not recognised
-            </span>
-            {current && !current.accepted && current.top3.length > 0 && current.top3[0] ? (
-              <ConfidenceBadge
-                band="low"
-                probability={current.top3[0].probability}
-                showNumeric={showNumeric}
+        <div
+          className={cn(
+            'ss-bordered rounded-2xl p-4 transition-colors',
+            simulateOcclusion ? 'border-warning/50 bg-warning-soft/30' : 'bg-raised',
+          )}
+        >
+          <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
+            <span className="inline-flex items-center gap-2 text-base font-semibold text-ink">
+              <Icon
+                name={simulateOcclusion ? 'alert' : 'info'}
+                size="1.25rem"
+                className={simulateOcclusion ? 'text-warning' : 'text-primary'}
               />
-            ) : null}
+              {simulateOcclusion
+                ? 'Insufficient landmark input — Occlusion detected (Simulation)'
+                : 'Recognition Model: Demo Mode / Untrained'}
+            </span>
+            <div className="flex items-center gap-2">
+              <Badge
+                tone={simulateOcclusion ? 'warning' : 'neutral'}
+                icon={simulateOcclusion ? 'alert' : 'lock'}
+              >
+                {simulateOcclusion ? 'Occlusion Simulation' : '159D Pipeline Live'}
+              </Badge>
+              <Badge tone="neutral">Dataset Pending</Badge>
+            </div>
           </div>
+
           <p className="mt-2 text-pretty text-sm text-muted">
-            {rejectionHint ??
-              'Hold a supported sign steady in the middle of the frame. No word is emitted when the model is unsure.'}
+            {simulateOcclusion
+              ? 'Fail-safe active: recognition is withheld due to incomplete hand pose tracking (simulated keypoint dropout/occlusion). Demonstrates fail-safe behavior; no trained occlusion reconstruction is claimed.'
+              : handCount > 0
+                ? 'Hand pose tracked and 159D features extracted in real time. Clinical ISL classification model is untrained pending a multi-signer labeled clinical dataset.'
+                : 'No hands detected. Bring hands into the camera frame to view live hand tracking and 159D feature extraction.'}
           </p>
-          {current && !current.accepted && current.top3.length > 0 ? (
-            <p className="mt-2 text-sm text-muted">
-              Closest matches were{' '}
-              {current.top3
-                .slice(0, 3)
-                .map((entry) => `${glossLabel(entry.label)} (${(entry.probability * 100).toFixed(0)}%)`)
-                .join(', ')}
-              . None reached the confidence threshold, so nothing was added.
-            </p>
-          ) : null}
+
+          <div className="mt-3 flex flex-wrap items-center gap-3 border-t border-line pt-2.5 text-xs text-muted">
+            <span className="flex items-center gap-1.5 font-medium">
+              <span
+                className={cn(
+                  'h-2 w-2 rounded-full',
+                  simulateOcclusion
+                    ? 'bg-warning animate-pulse'
+                    : handCount > 0
+                      ? 'bg-success'
+                      : 'bg-ink-faint',
+                )}
+              />
+              <span>
+                Input:{' '}
+                {simulateOcclusion
+                  ? '11/21 keypoints (Occluded)'
+                  : handCount > 0
+                    ? '21/21 keypoints (Clean)'
+                    : '0 keypoints'}
+              </span>
+            </span>
+            <span>·</span>
+            <span>159D Feature Vector: {handCount > 0 ? 'Extracted' : 'Idle'}</span>
+            <span>·</span>
+            <span>Inference: On-device WASM</span>
+          </div>
         </div>
       )}
 

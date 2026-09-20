@@ -84,7 +84,8 @@ export type RejectionReason =
   | 'unstable'
   | 'no_hands'
   | 'unsupported_model'
-  | 'below_min_hand_confidence';
+  | 'below_min_hand_confidence'
+  | 'insufficient_landmarks';
 
 export interface ScoredLabel {
   /** Vocabulary gloss, e.g. `PAIN`. */

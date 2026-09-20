@@ -63,7 +63,18 @@ export interface SkeletonStyle {
    * so turning the diagnostic layer off never leaves an empty overlay.
    */
   diagnostic?: boolean;
+  /**
+   * When true, simulates missing / dropped landmarks (distal joints) to demonstrate
+   * occlusion detection and fail-safe handling.
+   */
+  occlusionSimulation?: boolean;
 }
+
+/** Indices dropped when simulating keypoint occlusion (thumb and finger distal joints). */
+export const SIMULATED_OCCLUDED_INDICES: ReadonlySet<number> = new Set([
+  3, 4, 7, 8, 11, 12, 15, 16, 19, 20,
+]);
+export const OCCLUSION_WARNING_COLOR = 'rgba(239, 68, 68, 0.9)';
 
 export function colorForHand(hand: HandLandmarks): string {
   return hand.handedness === 'Left' ? LEFT_HAND_COLOR : RIGHT_HAND_COLOR;
@@ -94,7 +105,11 @@ export function drawSkeleton(
   const soft = softColorForHand(hand);
   const lineWidth = style.lineWidth ?? 2.5;
   const halo = Math.max(0, 14 * style.strokeWeight);
-  const pts = hand.landmarks.map((lm) => (valid(lm) ? pointFor(lm, width, height) : null));
+  const isOccluded = (index: number) =>
+    Boolean(style.occlusionSimulation && SIMULATED_OCCLUDED_INDICES.has(index));
+  const pts = hand.landmarks.map((lm, index) =>
+    valid(lm) && !isOccluded(index) ? pointFor(lm, width, height) : null,
+  );
 
   ctx.save();
   ctx.strokeStyle = color;
@@ -164,6 +179,24 @@ export function drawSkeleton(
     ctx.fillStyle = color;
   }
   ctx.restore();
+
+  // Draw visual indicators for missing / occluded keypoints during occlusion simulation
+  if (style.occlusionSimulation) {
+    ctx.save();
+    ctx.strokeStyle = OCCLUSION_WARNING_COLOR;
+    ctx.lineWidth = 1.6;
+    ctx.shadowColor = HALO_COLOR;
+    ctx.shadowBlur = halo;
+    for (const index of SIMULATED_OCCLUDED_INDICES) {
+      const lm = hand.landmarks[index];
+      if (!valid(lm)) continue;
+      const p = pointFor(lm, width, height);
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, 6, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
 }
 
 /** Full overlay: optional dimming backdrop + every hand + shoulder markers. */

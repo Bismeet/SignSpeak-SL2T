@@ -88,6 +88,37 @@ describe('no-hands and low-trust tracking', () => {
     ]);
     expect(results[2]?.prediction.accepted).toBe(true);
   });
+
+  it('rejects with insufficient_landmarks and never emits when landmark completeness is below 0.85', () => {
+    const result = decide({
+      state: createDecisionState(),
+      probabilities: painHeavy(0.95),
+      vocabulary: VOCABULARY,
+      handCount: 1,
+      bestHandScore: 0.95,
+      config: DEFAULT_DECISION_CONFIG,
+      landmarkCompleteness: 0.52,
+    });
+    expect(result.prediction.accepted).toBe(false);
+    expect(result.prediction.reason).toBe('insufficient_landmarks');
+    expect(result.prediction.label).toBe('Not recognised');
+    expect(result.emitted).toBe(false);
+  });
+
+  it('rejects with insufficient_landmarks when isIncompleteLandmarks is explicitly flagged', () => {
+    const result = decide({
+      state: createDecisionState(),
+      probabilities: painHeavy(0.95),
+      vocabulary: VOCABULARY,
+      handCount: 1,
+      bestHandScore: 0.95,
+      config: DEFAULT_DECISION_CONFIG,
+      isIncompleteLandmarks: true,
+    });
+    expect(result.prediction.accepted).toBe(false);
+    expect(result.prediction.reason).toBe('insufficient_landmarks');
+    expect(result.emitted).toBe(false);
+  });
 });
 
 describe('no model output', () => {
@@ -332,6 +363,7 @@ describe('confidence bands and hints', () => {
       'no_hands',
       'unsupported_model',
       'below_min_hand_confidence',
+      'insufficient_landmarks',
     ];
     for (const reason of reasons) {
       expect(REJECTION_HINT[reason]).toBeTruthy();

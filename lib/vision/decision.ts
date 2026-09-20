@@ -75,6 +75,13 @@ export interface DecisionInput {
   config: DecisionConfig;
   /** Gloss used for the explicit negative class, if the model has one. */
   negativeClass?: string | null;
+  /**
+   * Ratio of usable, finite landmarks across hands (1.0 = clean, < 0.85 = incomplete/occluded).
+   * When incomplete, recognition is withheld to prevent hallucinated signs under occlusion.
+   */
+  landmarkCompleteness?: number;
+  /** True when landmark input is flagged as incomplete or partially occluded. */
+  isIncompleteLandmarks?: boolean;
 }
 
 export interface DecisionResult {
@@ -151,7 +158,23 @@ export function decide(input: DecisionInput): DecisionResult {
     };
   }
 
-  // 2. Landmarks detected but MediaPipe is not confident they are really hands.
+  // 2. Incomplete landmark input / occlusion detected -> fail-safe withholding.
+  if (
+    input.isIncompleteLandmarks ||
+    (input.landmarkCompleteness !== undefined && input.landmarkCompleteness < 0.85)
+  ) {
+    return {
+      state: {
+        ...pushVerdict(state, null, config.windowSize),
+        consecutiveRejections: state.consecutiveRejections + 1,
+      },
+      prediction: rejection('insufficient_landmarks', top3),
+      emitted: false,
+      suggestPhraseBoard: false,
+    };
+  }
+
+  // 3. Landmarks detected but MediaPipe is not confident they are really hands.
   if (bestHandScore > 0 && bestHandScore < config.minHandScore) {
     return {
       state: {
@@ -322,4 +345,6 @@ export const REJECTION_HINT: Record<RejectionReason, string> = {
   low_margin: 'Two signs look similar here. Hold the sign still and face the camera.',
   unstable: 'Almost there. Hold the sign for a moment longer.',
   unsupported_model: 'Sign recognition is not available. Use the phrase board or typing.',
+  insufficient_landmarks:
+    'Insufficient landmark input — occlusion detected. Move hands to unblock fingers or use the phrase board.',
 };

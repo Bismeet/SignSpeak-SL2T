@@ -16,13 +16,18 @@ import {
   HAND,
   HAND_LANDMARK_COUNT,
   POSE,
+  computeLandmarkCompleteness,
+  countUsableLandmarks,
   extractFeatureVector,
   handCentroid,
+  isHandComplete,
+  MIN_USABLE_LANDMARKS_PER_HAND,
   normaliseHand,
   palmNormal,
   selectHandSlots,
   type FeatureVector,
 } from '@/lib/vision/features';
+import { applyOcclusionSimulation } from '@/lib/vision/use-sign-recognition';
 
 type Landmark = { x: number; y: number; z: number };
 
@@ -406,3 +411,49 @@ describe('small helpers', () => {
     expect(Math.sign(palmNormal(rotated)[2])).toBe(Math.sign(palmNormal(OPEN_HAND)[2]));
   });
 });
+
+describe('landmark completeness and occlusion simulation', () => {
+  it('counts 21 usable landmarks on a clean open hand', () => {
+    const hand = { handedness: 'Right' as const, score: 0.95, landmarks: OPEN_HAND };
+    expect(countUsableLandmarks(hand)).toBe(21);
+    expect(isHandComplete(hand)).toBe(true);
+    expect(computeLandmarkCompleteness([hand])).toBe(1.0);
+  });
+
+  it('detects missing coordinates as unusable', () => {
+    const corrupted = OPEN_HAND.map((lm, i) =>
+      i < 5 ? { x: Number.NaN, y: lm.y, z: lm.z } : lm,
+    );
+    const hand = { handedness: 'Right' as const, score: 0.95, landmarks: corrupted };
+    expect(countUsableLandmarks(hand)).toBe(16);
+    expect(MIN_USABLE_LANDMARKS_PER_HAND).toBe(18);
+    expect(isHandComplete(hand)).toBe(false);
+    expect(computeLandmarkCompleteness([hand])).toBe(16 / 21);
+  });
+
+  it('detects low-visibility landmarks as unusable', () => {
+    const lowVis = OPEN_HAND.map((lm, i) =>
+      i < 4 ? { ...lm, visibility: 0.2 } : { ...lm, visibility: 0.9 },
+    );
+    const hand = { handedness: 'Right' as const, score: 0.95, landmarks: lowVis };
+    expect(countUsableLandmarks(hand)).toBe(17);
+    expect(isHandComplete(hand)).toBe(false);
+  });
+
+  it('applyOcclusionSimulation drops 10 distal landmarks and triggers incomplete status', () => {
+    const cleanFrame = frame([{ handedness: 'Right', score: 0.95, landmarks: OPEN_HAND }]);
+    const occludedFrame = applyOcclusionSimulation(cleanFrame);
+
+    expect(occludedFrame.hands).toHaveLength(1);
+    const occludedHand = occludedFrame.hands[0]!;
+    // 10 distal landmarks are marked with visibility: 0, leaving 11 usable
+    const usableCount = countUsableLandmarks(occludedHand);
+    expect(usableCount).toBe(11);
+    expect(isHandComplete(occludedHand)).toBe(false);
+
+    const completeness = computeLandmarkCompleteness(occludedFrame.hands);
+    expect(completeness).toBeCloseTo(11 / 21, 4);
+    expect(completeness).toBeLessThan(0.85);
+  });
+});
+

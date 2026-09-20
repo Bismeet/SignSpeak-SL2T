@@ -214,6 +214,34 @@ export function handCentroid(landmarks: Landmark[]): { x: number; y: number } {
   return { x: sx / n, y: sy / n };
 }
 
+/** Minimum number of valid landmarks (out of 21) required for a hand to be considered complete. */
+export const MIN_USABLE_LANDMARKS_PER_HAND = 18;
+
+export function countUsableLandmarks(hand: HandLandmarks): number {
+  let count = 0;
+  for (const lm of hand.landmarks) {
+    if (isUsable(lm) && (lm.visibility === undefined || lm.visibility >= 0.5)) count += 1;
+  }
+  return count;
+}
+
+export function isHandComplete(hand: HandLandmarks): boolean {
+  if (hand.landmarks.length < HAND_LANDMARK_COUNT) return false;
+  return countUsableLandmarks(hand) >= MIN_USABLE_LANDMARKS_PER_HAND;
+}
+
+/** Ratio of valid, finite landmarks across all detected hands (0..1). */
+export function computeLandmarkCompleteness(hands: HandLandmarks[]): number {
+  if (hands.length === 0) return 0;
+  let totalUsable = 0;
+  let totalPossible = 0;
+  for (const hand of hands) {
+    totalPossible += HAND_LANDMARK_COUNT;
+    totalUsable += countUsableLandmarks(hand);
+  }
+  return totalPossible > 0 ? totalUsable / totalPossible : 0;
+}
+
 /* ------------------------------------------------------------------------------------
  * Hand selection
  * ---------------------------------------------------------------------------------- */

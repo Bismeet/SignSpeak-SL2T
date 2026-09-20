@@ -31,7 +31,7 @@ import {
   watchTrackEnded,
   type CameraFailure,
 } from '@/lib/vision/camera';
-import { extractFeatureVector } from '@/lib/vision/features';
+import { computeLandmarkCompleteness, extractFeatureVector } from '@/lib/vision/features';
 import {
   confidenceBand,
   createDecisionState,
@@ -46,7 +46,7 @@ import {
 } from '@/lib/vision/decision';
 import { useModel } from '@/lib/state/model-provider';
 import { useSettings } from '@/lib/state/settings';
-import { drawHandOverlay } from '@/lib/vision/hand-skeleton';
+import { drawHandOverlay, SIMULATED_OCCLUDED_INDICES } from '@/lib/vision/hand-skeleton';
 import type {
   CameraStatus,
   ConfidenceBand,
@@ -81,6 +81,10 @@ export interface RecognitionSnapshot {
   rejectionHint: string | null;
   /** The most recent accepted sign, awaiting user review. */
   latestAccepted: AcceptedSign | null;
+  /** Completeness ratio of tracked landmarks (1.0 = clean, ~0.52 = occluded). */
+  landmarkCompleteness: number;
+  /** True when occlusion is detected or simulated. */
+  isOccluded: boolean;
 }
 
 export interface UseSignRecognitionOptions {
@@ -105,6 +109,9 @@ export interface UseSignRecognitionResult extends RecognitionSnapshot {
   preparing: boolean;
   /** True when replaying recorded landmarks instead of using the camera. */
   replaying: boolean;
+  /** Developer demo occlusion simulation active. */
+  simulateOcclusion: boolean;
+  setSimulateOcclusion: (value: boolean) => void;
   /** Clears the "latest accepted" chip after the user confirms or rejects it. */
   clearLatestAccepted: () => void;
   /**
@@ -128,6 +135,28 @@ interface ReplayFixture {
   source: string;
   notForRealUse?: boolean;
   frames: Array<Omit<FrameLandmarks, 'timestampMs'>>;
+}
+
+/**
+ * Simulates keypoint occlusion by marking distal joints (tips and DIPs)
+ * with visibility: 0, reflecting real-world hand self-occlusion or obstruction.
+ */
+export function applyOcclusionSimulation(frame: FrameLandmarks): FrameLandmarks {
+  return {
+    ...frame,
+    hands: frame.hands.map((hand) => ({
+      ...hand,
+      landmarks: hand.landmarks.map((lm, idx) => {
+        if (SIMULATED_OCCLUDED_INDICES.has(idx)) {
+          return {
+            ...lm,
+            visibility: 0,
+          };
+        }
+        return lm;
+      }),
+    })),
+  };
 }
 
 /* ------------------------------------------------------------------------------------
@@ -160,6 +189,8 @@ export function useSignRecognition(
     current: null,
     rejectionHint: null,
     latestAccepted: null,
+    landmarkCompleteness: 1,
+    isOccluded: false,
   });
   const [cameraFailure, setCameraFailure] = useState<CameraFailure | null>(null);
   const [landmarkerFailure, setLandmarkerFailure] = useState<LandmarkerFailure | null>(null);
@@ -167,6 +198,9 @@ export function useSignRecognition(
   const [preparing, setPreparing] = useState(false);
   const [replaying, setReplaying] = useState(false);
   const [suggestPhraseBoard, setSuggestPhraseBoard] = useState(false);
+  const [simulateOcclusion, setSimulateOcclusion] = useState(false);
+  const simulateOcclusionRef = useRef(false);
+  simulateOcclusionRef.current = simulateOcclusion;
 
   // Refs used by the animation loop; keeping them out of state avoids stale closures.
   const streamRef = useRef<MediaStream | null>(null);
@@ -285,6 +319,7 @@ export function useSignRecognition(
       // Settings > "Show hand landmarks": joint dots and shoulder markers on top of the
       // always-on skeleton.
       diagnostic: showOverlayRef.current,
+      occlusionSimulation: simulateOcclusionRef.current,
       // Feed opacity is applied by the panel to the `<video>` element itself, not baked
       // into this bitmap. The overlay is deliberately static: it takes no frame clock, so
       // it can never animate on its own (docs/ui-ux-specification.md §1).
@@ -300,6 +335,7 @@ export function useSignRecognition(
       // landmark replay, which is fine — the overlay then uses the canvas' own pixel box.
       drawOverlay(frame, video);
       const classifier = await ensureClassifier();
+
       if (!classifier) {
         setModelError('Sign recognition is not available on this device right now.');
         publish({
@@ -307,6 +343,8 @@ export function useSignRecognition(
           rejectionHint: REJECTION_HINT.unsupported_model,
           tracking: frame.hands.length > 0 ? 'tracking' : 'no-hands',
           handCount: frame.hands.length,
+          landmarkCompleteness: frame.hands.length > 0 ? 1 : 0,
+          isOccluded: false,
         });
         return;
       }
@@ -325,6 +363,11 @@ export function useSignRecognition(
       const previousState = decisionRef.current;
       const releasedState = releaseLatchIfReleased(previousState, features.handCount);
 
+      const completeness = computeLandmarkCompleteness(frame.hands);
+      const isOccluded =
+        frame.hands.length > 0 &&
+        (completeness < 0.85 || simulateOcclusionRef.current);
+
       const result = decide({
         state: releasedState,
         probabilities,
@@ -333,6 +376,8 @@ export function useSignRecognition(
         bestHandScore: features.bestHandScore,
         config: decisionConfigRef.current,
         negativeClass: classifier.card.negativeClass,
+        landmarkCompleteness: completeness,
+        isIncompleteLandmarks: isOccluded,
       });
 
       decisionRef.current = result.state;
@@ -350,7 +395,11 @@ export function useSignRecognition(
         setSuggestPhraseBoard(true);
       }
 
-      if (result.emitted && result.prediction.accepted) {
+      // In demo mode (model not trained for real use), prevent emitting fabricated ISL
+      // predictions into the patient conversation. Keep feature extraction live.
+      const isDemoModel = Boolean(classifier.card.notForRealUse);
+
+      if (!isDemoModel && result.emitted && result.prediction.accepted) {
         const alternatives: MessageAlternative[] = result.prediction.top3
           .slice(0, 3)
           .map((entry) => ({ label: entry.label, probability: entry.probability }));
@@ -369,13 +418,21 @@ export function useSignRecognition(
       }
 
       publish({
-        current: result.prediction,
+        current: isDemoModel ? { ...result.prediction, accepted: false } : result.prediction,
         rejectionHint:
-          result.prediction.accepted || !result.prediction.reason
-            ? null
-            : REJECTION_HINT[result.prediction.reason],
+          features.handCount === 0
+            ? REJECTION_HINT.no_hands
+            : result.prediction.reason === 'insufficient_landmarks'
+              ? REJECTION_HINT.insufficient_landmarks
+              : isDemoModel
+                ? 'Recognition model not trained (Demo mode). Hand landmarks and 159D features are live.'
+                : result.prediction.accepted || !result.prediction.reason
+                  ? null
+                  : REJECTION_HINT[result.prediction.reason],
         tracking: features.handCount > 0 ? 'tracking' : 'no-hands',
         handCount: features.handCount,
+        landmarkCompleteness: frame.hands.length > 0 ? completeness : 0,
+        isOccluded,
       });
     },
     [drawOverlay, ensureClassifier, publish],
@@ -436,7 +493,11 @@ export function useSignRecognition(
 
       if (inferringRef.current) return;
       inferringRef.current = true;
-      void processFrame(frame, replay ? null : video)
+      const inputFrame =
+        simulateOcclusionRef.current && frame.hands.length > 0
+          ? applyOcclusionSimulation(frame)
+          : frame;
+      void processFrame(inputFrame, replay ? null : video)
         .catch((error: unknown) => {
           console.warn('[SignSpeak] Frame processing failed.', error);
         })
@@ -486,6 +547,8 @@ export function useSignRecognition(
       current: null,
       rejectionHint: null,
       latestAccepted: null,
+      landmarkCompleteness: 1,
+      isOccluded: false,
     });
   }, []);
 
@@ -702,6 +765,8 @@ export function useSignRecognition(
     modelError,
     preparing,
     replaying,
+    simulateOcclusion,
+    setSimulateOcclusion,
     clearLatestAccepted,
     consumeLastAcceptedFeatures,
     suggestPhraseBoard,
