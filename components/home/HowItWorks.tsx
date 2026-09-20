@@ -34,10 +34,10 @@ export function HowItWorks() {
       <div className="w-full">
 
         <Image
-          src="/how-it-works-wabi-sabi.jpg"
+          src="/how-it-works.svg"
           alt="How SignSpeak works: Three simple steps, one shared conversation. Step 1: Sign or type (The deaf user signs at the camera, types, or selects a phrase from the board). Step 2: Speak or type (The hearing person speaks or types and reviews the message). Step 3: Understand (The reply is shown as text or a verified ISL clip when available). Limitation note: Sign recognition and ISL videos are limited, and SignSpeak does not replace a qualified interpreter."
-          width={1600}
-          height={800}
+          width={2048}
+          height={1024}
           sizes="100vw"
           className="w-full h-auto block"
           loading="lazy"

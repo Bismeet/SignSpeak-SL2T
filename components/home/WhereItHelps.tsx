@@ -52,10 +52,10 @@ export function WhereItHelps() {
       <div className="w-full">
 
         <Image
-          src="/where-signspeak-helps.jpg"
+          src="/where-signspeak-helps.svg"
           alt="Where SignSpeak can help: Designed for real situations. From hospitals and clinics to everyday spaces, SignSpeak makes communication more inclusive, clear, and human. 1. Hospital communication (Support simple exchanges about symptoms, needs, and basic requests). 2. Emergency situations (Quick access to essential phrases when every second matters). 3. Everyday interactions (Use at clinics, public spaces, transport, and daily life conversations). 4. More inclusive spaces (A step towards a kinder, more accessible society). Communication builds trust: When people understand each other, care becomes better for everyone."
-          width={1600}
-          height={800}
+          width={2048}
+          height={1024}
           sizes="100vw"
           className="w-full h-auto block"
           loading="lazy"

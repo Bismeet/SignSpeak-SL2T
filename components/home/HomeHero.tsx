@@ -48,7 +48,7 @@ export function HomeHero() {
       />
 
       <div className="relative z-10 mx-auto w-full max-w-7xl px-4 py-2 sm:px-6 sm:py-3 lg:px-8">
-        <div className="max-w-md sm:max-w-lg lg:max-w-xl pl-1 sm:pl-3">
+        <div className="max-w-md sm:max-w-xl lg:max-w-2xl xl:max-w-3xl pl-2 sm:pl-4 lg:pl-6">
           {/* Doodle botanical sketch & Eyebrow */}
           <div className="flex items-center gap-1.5">
             <svg
@@ -66,7 +66,7 @@ export function HomeHero() {
               <path d="M12 10c2-1 4-2 5-1" />
               <path d="M12 14c-1.5 1-3 1.5-4 1" />
             </svg>
-            <p className="font-serif text-xs sm:text-sm font-semibold tracking-wide text-[#3F5745]">
+            <p className="font-serif text-[17px] sm:text-[19px] font-semibold tracking-wide text-[#3F5745]">
               Communication without barriers
             </p>
           </div>
@@ -74,11 +74,11 @@ export function HomeHero() {
           {/* Headline - large, bold, prominent typography */}
           <h1
             id="home-heading"
-            className="mt-1.5 sm:mt-2 font-serif text-2xl sm:text-3xl lg:text-[2.35rem] xl:text-[2.65rem] font-bold text-[#292D38] leading-[1.12] tracking-tight"
+            className="mt-1.5 sm:mt-2 font-serif text-[29px] sm:text-[35px] lg:text-[43px] xl:text-[47px] font-bold text-[#292D38] leading-[1.14] tracking-tight"
           >
-            Every conversation <br className="hidden sm:inline" />
-            deserves to be{' '}
-            <span className="relative inline-block text-[#71856A] italic font-serif">
+            <span className="block whitespace-nowrap">Every conversation deserves</span>
+            <span>to be </span>
+            <span className="relative inline-block text-[#71856A] italic font-serif mt-0.5">
               understood.
               {/* Hand-drawn wavy doodle underline */}
               <svg
@@ -99,7 +99,7 @@ export function HomeHero() {
           </h1>
 
           {/* Subheading */}
-          <p className="mt-2 sm:mt-2.5 max-w-md text-xs sm:text-sm md:text-[0.925rem] leading-relaxed text-[#292D38]/85 font-normal">
+          <p className="mt-2 sm:mt-2.5 max-w-md text-[17px] sm:text-[19px] md:text-[20px] leading-relaxed text-[#292D38]/85 font-normal">
             SignSpeak helps deaf and hearing people communicate through Indian Sign Language,
             text, and speech — with a focus on hospital and emergency situations.
           </p>
@@ -129,7 +129,7 @@ export function HomeHero() {
           </div>
 
           {/* Trust Badges */}
-          <div className="mt-3 sm:mt-3.5 border-t border-[#D5C4A8]/80 pt-2 sm:pt-2.5">
+          <div className="mt-3 sm:mt-3.5 border-t border-[#D5C4A8]/80 pt-2 sm:pt-2.5 max-w-md">
             <ul className="flex flex-wrap items-center gap-x-5 gap-y-1.5 text-xs sm:text-[13px] font-medium text-[#292D38]/85">
               <li className="inline-flex items-center gap-1.5">
                 <Icon name="shield" size="1.05rem" className="text-[#292D38]" />
@@ -172,7 +172,7 @@ export function HomeHero() {
           </div>
 
           {/* Standing safety statement note */}
-          <p className="mt-1.5 text-[11px] sm:text-xs text-[#292D38]/65 leading-tight">
+          <p className="mt-1.5 text-[11px] sm:text-xs text-[#292D38]/65 leading-tight max-w-md">
             <span className="font-semibold text-[#292D38]">SignSpeak is a communication aid</span>, not a medical device. In an emergency call{' '}
             <strong className="text-[#292D38] font-semibold">{config.emergencyNumber}</strong>.
           </p>
