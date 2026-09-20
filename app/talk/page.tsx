@@ -26,7 +26,6 @@ import { ClipPlayer } from '@/components/phrases/ClipPlayer';
 import { PhraseBoard } from '@/components/phrases/PhraseBoard';
 import { SpeakControls } from '@/components/speech/SpeakControls';
 import { PHRASE_MATCHER, clipAvailability } from '@/lib/phrases/data';
-import { MATCH_METHOD_LABEL } from '@/lib/phrases/matcher';
 import { glossLabel } from '@/lib/signs/vocabulary';
 import { useAsr } from '@/lib/speech/use-asr';
 import { useSpeaker } from '@/lib/speech/use-speaker';
@@ -50,7 +49,6 @@ export default function TalkPage() {
   const [confirmEnd, setConfirmEnd] = useState(false);
   const [patientTypeOpen, setPatientTypeOpen] = useState(false);
   const [patientText, setPatientText] = useState('');
-  const [lastMatchNote, setLastMatchNote] = useState<string | null>(null);
 
   const latestRecognitionIdRef = useRef<string | null>(null);
 
@@ -154,19 +152,8 @@ export default function TalkPage() {
         },
       });
 
-      if (phrase) {
-        setLastMatchNote(
-          `${MATCH_METHOD_LABEL[match.method]} — “${phrase.textEn}”. ${
-            mode === 'isl_clip'
-              ? 'A verified ISL video is shown to the patient.'
-              : 'No verified ISL video exists for this phrase, so it is shown as text only.'
-          }`,
-        );
-      } else {
-        setLastMatchNote(
-          'No phrase in the curated list matches this. The text is shown as written, with the “no verified ISL video” notice.',
-        );
-      }
+      // The match is reflected in the message's own delivery badge; the note text was
+      // previously computed but never rendered, so it is dropped rather than carried.
     },
     [dispatch],
   );

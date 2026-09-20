@@ -31,9 +31,21 @@ export function HomeHero() {
   return (
     <section
       aria-labelledby="home-heading"
-      className="relative w-full h-[calc(100vh-3.25rem)] min-h-[380px] bg-[#F1E8D8] bg-[url('/hero-wabi-sabi-bg.jpg')] bg-cover bg-center bg-no-repeat flex items-center overflow-hidden transition-colors duration-200"
+      className="relative w-full h-[calc(100vh-3.25rem)] min-h-[380px] bg-[#F1E8D8] flex items-center overflow-hidden transition-colors duration-200"
     >
-
+      {/* Hero backdrop: eager + fetchpriority high — it is the LCP element.
+          Deliberately a plain <img>, not next/image: `images.unoptimized` + static
+          export means next/image adds runtime machinery but does no resizing; the
+          pre-encoded 1600px mozjpeg in public/ is already optimal. */}
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src="/hero-wabi-sabi-bg.jpg"
+        alt=""
+        aria-hidden="true"
+        fetchPriority="high"
+        decoding="async"
+        className="absolute inset-0 h-full w-full object-cover"
+      />
 
       <div className="relative z-10 mx-auto w-full max-w-7xl px-4 py-2 sm:px-6 sm:py-3 lg:px-8">
         <div className="max-w-md sm:max-w-lg lg:max-w-xl pl-1 sm:pl-3">

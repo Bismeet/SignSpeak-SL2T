@@ -22,6 +22,7 @@ export type IconName =
   | 'arrow-left'
   | 'arrow-right'
   | 'badge-check'
+  | 'book-open'
   | 'bot'
   | 'camera'
   | 'camera-off'
@@ -43,6 +44,9 @@ export type IconName =
   | 'keyboard'
   | 'list'
   | 'lock'
+  | 'log-out'
+  | 'menu'
+  | 'message-square'
   | 'mic'
   | 'mic-off'
   | 'pause'
@@ -76,6 +80,7 @@ const PATHS: Record<IconName, string[]> = {
   'arrow-left': ['M19 12H5', 'm11 6-6 6 6 6'],
   'arrow-right': ['M5 12h14', 'm13 6 6 6-6 6'],
   'badge-check': ['M12 3l7.5 2.8v5.6c0 4.6-3.1 7.5-7.5 8.6-4.4-1.1-7.5-4-7.5-8.6V5.8z', 'm8.8 12 2.2 2.2 4.2-4.4'],
+  'book-open': ['M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z', 'M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z'],
   bot: [
     'M12 2v2',
     'M4 8a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2Z',
@@ -114,6 +119,9 @@ const PATHS: Record<IconName, string[]> = {
   keyboard: ['M3 7.5h18v9H3z', 'M6.5 10.5h.01', 'M9.5 10.5h.01', 'M12.5 10.5h.01', 'M15.5 10.5h.01', 'M8 14h8'],
   list: ['M4 7h16', 'M4 12h16', 'M4 17h10'],
   lock: ['M5.5 10.5h13V20h-13z', 'M8.5 10.5V7.8a3.5 3.5 0 0 1 7 0v2.7'],
+  'log-out': ['M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4', 'm16 17 5-5-5-5', 'M21 12H9'],
+  menu: ['M4 6h16', 'M4 12h16', 'M4 18h16'],
+  'message-square': ['M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z'],
   mic: ['M12 15.2a3.6 3.6 0 0 0 3.6-3.6V6.2a3.6 3.6 0 0 0-7.2 0v5.4A3.6 3.6 0 0 0 12 15.2Z', 'M5.8 11.6a6.2 6.2 0 0 0 12.4 0', 'M12 17.8V21', 'M9 21h6'],
   'mic-off': ['M4 4l16 16', 'M15.6 11.6a3.6 3.6 0 0 1-5.1 3.3', 'M8.4 8.1V6.2a3.6 3.6 0 0 1 7.1-.9', 'M5.8 11.6a6.2 6.2 0 0 0 9.6 5', 'M12 17.8V21', 'M9 21h6'],
   pause: ['M8.5 5.5v13', 'M15.5 5.5v13'],

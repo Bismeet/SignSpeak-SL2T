@@ -29,7 +29,10 @@ const PORT = Number(process.env.E2E_PORT ?? 4322);
  * included). Leave it unset and Playwright uses its own, which is the normal setup; run
  * `npx playwright install chromium` once.
  */
-const executablePath = process.env.PLAYWRIGHT_CHROME_PATH || undefined;
+import { existsSync } from 'node:fs';
+
+const SYSTEM_CHROME = 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe';
+const executablePath = process.env.PLAYWRIGHT_CHROME_PATH || (existsSync(SYSTEM_CHROME) ? SYSTEM_CHROME : undefined);
 
 export default defineConfig({
   testDir: './e2e',
@@ -52,7 +55,7 @@ export default defineConfig({
 
   use: {
     baseURL: `http://127.0.0.1:${PORT}`,
-    trace: 'retain-on-failure',
+    trace: 'off',
     screenshot: 'only-on-failure',
     launchOptions: {
       ...(executablePath ? { executablePath } : {}),

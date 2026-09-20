@@ -12,7 +12,6 @@
 import { useEffect, useRef } from 'react';
 import { Badge } from '@/components/ui/Badge';
 import { Icon, type IconName } from '@/components/ui/Icon';
-import { EmptyState } from '@/components/common/PermissionState';
 import { MessageBubble } from '@/components/conversation/MessageBubble';
 import { cn } from '@/lib/utils/cn';
 import type { ConversationMessage, ConversationParty } from '@/lib/types';

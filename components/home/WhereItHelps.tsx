@@ -20,6 +20,7 @@ export function WhereItHelps() {
       id="where-it-helps"
       aria-labelledby="where-it-helps-heading"
       className="relative w-full bg-[#F1E8D8] pt-6 sm:pt-10 overflow-hidden transition-colors duration-200"
+      style={{ contentVisibility: 'auto', containIntrinsicSize: '1px 700px' }}
     >
       {/* Narrative Bridge: Transition from How It Works to Real-World Situations */}
       <div className="mx-auto flex max-w-6xl flex-col items-center justify-center px-4 pb-4 sm:pb-6 text-center">
@@ -51,13 +52,14 @@ export function WhereItHelps() {
       <div className="w-full">
 
         <Image
-          src="/where-signspeak-helps.png"
+          src="/where-signspeak-helps.jpg"
           alt="Where SignSpeak can help: Designed for real situations. From hospitals and clinics to everyday spaces, SignSpeak makes communication more inclusive, clear, and human. 1. Hospital communication (Support simple exchanges about symptoms, needs, and basic requests). 2. Emergency situations (Quick access to essential phrases when every second matters). 3. Everyday interactions (Use at clinics, public spaces, transport, and daily life conversations). 4. More inclusive spaces (A step towards a kinder, more accessible society). Communication builds trust: When people understand each other, care becomes better for everyone."
-          width={2048}
-          height={1024}
+          width={1600}
+          height={800}
           sizes="100vw"
           className="w-full h-auto block"
           loading="lazy"
+          fetchPriority="low"
         />
 
       </div>

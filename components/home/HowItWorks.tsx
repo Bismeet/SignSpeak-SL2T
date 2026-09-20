@@ -19,6 +19,7 @@ export function HowItWorks() {
       id="how-it-works"
       aria-labelledby="how-it-works-heading"
       className="relative w-full bg-[#F1E8D8] pt-6 sm:pt-8 overflow-hidden transition-colors duration-200"
+      style={{ contentVisibility: 'auto', containIntrinsicSize: '1px 700px' }}
     >
       {/* Chapter Eyebrow Tag */}
       <div className="mx-auto flex max-w-6xl items-center justify-center gap-3 px-4 pb-2">
@@ -29,17 +30,18 @@ export function HowItWorks() {
         <div className="h-[1px] w-10 sm:w-16 bg-[#D5C4A8]" />
       </div>
 
-      {/* Full-bleed illustrated explainer graphic */}
+      {/* Full-bleed illustrated explainer graphic. Below the fold: lazy + async decode. */}
       <div className="w-full">
 
         <Image
-          src="/how-it-works-wabi-sabi.png"
+          src="/how-it-works-wabi-sabi.jpg"
           alt="How SignSpeak works: Three simple steps, one shared conversation. Step 1: Sign or type (The deaf user signs at the camera, types, or selects a phrase from the board). Step 2: Speak or type (The hearing person speaks or types and reviews the message). Step 3: Understand (The reply is shown as text or a verified ISL clip when available). Limitation note: Sign recognition and ISL videos are limited, and SignSpeak does not replace a qualified interpreter."
-          width={2048}
-          height={1024}
+          width={1600}
+          height={800}
           sizes="100vw"
           className="w-full h-auto block"
-          priority
+          loading="lazy"
+          fetchPriority="low"
         />
 
       </div>

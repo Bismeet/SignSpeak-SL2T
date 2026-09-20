@@ -45,13 +45,25 @@ export function BrandMark({ size = 40, className, labelled = false }: BrandMarkP
   );
 }
 
-export function BrandLockup({ compact = false }: { compact?: boolean }) {
+export function BrandLockup({
+  compact = false,
+  subtitle = 'People Understand People',
+}: {
+  compact?: boolean;
+  subtitle?: string | null;
+}) {
   return (
     <span className="flex items-center gap-2.5">
-      <BrandMark size={compact ? 32 : 38} />
-      <span className="flex flex-col leading-none">
-        <span className="font-display text-xl font-bold tracking-tight sm:text-2xl">SignSpeak</span>
-        {!compact ? (
+      <BrandMark size={compact ? 32 : 36} />
+      <span className="flex flex-col leading-tight">
+        <span className="font-display text-xl font-bold tracking-tight text-ink sm:text-2xl">
+          SignSpeak
+        </span>
+        {subtitle ? (
+          <span className="text-[11px] font-medium tracking-normal text-muted/90">
+            {subtitle}
+          </span>
+        ) : !compact ? (
           <span className="mt-0.5 text-xs font-medium uppercase tracking-[0.14em] text-muted">
             Indian Sign Language
           </span>

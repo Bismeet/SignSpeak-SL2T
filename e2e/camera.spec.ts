@@ -140,7 +140,7 @@ test.describe('starting the camera wires the preview and the status pill', () =>
     await page.getByRole('button', { name: /start camera/i }).click();
     await waitForLiveFrames(page);
 
-    await page.getByRole('button', { name: /stop camera/i }).click();
+    await page.getByRole('button', { name: /stop camera/i }).first().click();
 
     await expect.poll(async () => cameraPillText(page), { timeout: 15_000 }).toBe('Camera off');
     await expect(videos(page)).toHaveCount(0);

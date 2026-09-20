@@ -16,7 +16,6 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Icon } from '@/components/ui/Icon';
-import { ClipPlayer } from '@/components/phrases/ClipPlayer';
 import { PHRASE_MATCHER, clipAvailability } from '@/lib/phrases/data';
 import type { Phrase } from '@/lib/types';
 import type { UseAsrResult } from '@/lib/speech/use-asr';
@@ -73,7 +72,7 @@ export function DoctorPanel({
 }: DoctorPanelProps) {
   const [selectedItem, setSelectedItem] = useState<DoctorPhraseItem | null>(null);
   const [playbackState, setPlaybackState] = useState<'idle' | 'playing' | 'completed'>('idle');
-  const [showSpeechFallback, setShowSpeechFallback] = useState(false);
+  const [showSpeechFallback, setShowSpeechFallback] = useState(true);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
 
@@ -138,7 +137,7 @@ export function DoctorPanel({
       videoRef.current.currentTime = 0;
       void videoRef.current.play().catch(() => undefined);
     }
-  }, [selectedItem?.id, hasVerifiedClip]);
+  }, [selectedItem, hasVerifiedClip]);
 
   const handlePlaySign = useCallback(() => {
     if (!selectedItem) return;

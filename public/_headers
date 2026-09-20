@@ -26,6 +26,20 @@
 /models/*.task
   Cache-Control: public, max-age=31536000, immutable
 
+# Next.js hashed chunks (/_next/static/*) are content-addressed: safe to cache hard.
+# Without this, every navigation re-downloads the shared 340KB JS on hosts that
+# default to no-cache — the single largest repeat-navigation cost measured.
+/_next/static/*
+  Cache-Control: public, max-age=31536000, immutable
+
+# Home illustrations are versioned by content in practice (rebuilt with the app):
+# a week of caching avoids re-download on every visit while still refreshing.
+/*.jpg
+  Cache-Control: public, max-age=604800
+
+/*.png
+  Cache-Control: public, max-age=604800
+
 # An exported model must NOT be cached hard: replacing it is how a corrected model ships,
 # and a stale cached classifier would silently disagree with the model card.
 /models/*.onnx

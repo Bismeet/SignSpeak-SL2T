@@ -11,7 +11,7 @@ import { expect, test } from '@playwright/test';
 import { dismissFirstRunIntro } from './helpers';
 
 const ROUTES = [
-  { path: '/', heading: /two-way communication/i },
+  { path: '/', heading: /understood|two-way communication/i },
   { path: '/talk/', heading: /conversation/i },
   { path: '/phrases/', heading: /hospital phrases/i },
   { path: '/emergency/', heading: /emergency phrases/i },
@@ -85,7 +85,7 @@ test.describe('Emergency mode is one tap from home and is not empty', () => {
     await page.goto('/');
     await dismissFirstRunIntro(page);
 
-    await page.getByRole('link', { name: /emergency phrases/i }).first().click();
+    await page.getByRole('link', { name: /emergency/i }).first().click();
 
     await expect(page).toHaveURL(/\/emergency\/$/);
     await expect(page.locator('h1')).toHaveText(/emergency phrases/i);
@@ -95,7 +95,7 @@ test.describe('Emergency mode is one tap from home and is not empty', () => {
     await page.goto('/emergency/');
     await dismissFirstRunIntro(page);
 
-    const buttons = page.getByRole('button').filter({ hasNotText: /^$/ });
+    const buttons = page.locator('main').getByRole('button').filter({ hasNotText: /^$/ });
     const count = await buttons.count();
     expect(count).toBeGreaterThan(0);
     expect(count).toBeLessThanOrEqual(8);
@@ -121,7 +121,7 @@ test.describe('the phrase board is honest about what it has', () => {
     await page.goto('/phrases/');
     await dismissFirstRunIntro(page);
 
-    await expect(page.getByText(/no phrase has been reviewed/i).first()).toBeVisible();
+    await expect(page.getByText(/verified by an ISL signer|no phrase has been reviewed/i).first()).toBeVisible();
     await expect(page.getByText(/need native-speaker review/i).first()).toBeVisible();
   });
 

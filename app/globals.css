@@ -418,13 +418,7 @@
   border-width: 0;
 }
 
+/* The long home sections below the fold are content-visibility:auto via their
+   component style (kept co-located there so it ships even if the id changes). */
 
-
-/* Optimize rendering of long homepage sections to eliminate scroll & navigation lag */
-#how-it-works,
-#where-it-helps,
-#key-features {
-  content-visibility: auto;
-  contain-intrinsic-size: 1px 700px;
-}
 

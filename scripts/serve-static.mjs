@@ -108,13 +108,23 @@ const server = createServer((request, response) => {
   }
 
   const type = TYPES[extname(found.file).toLowerCase()] ?? 'application/octet-stream';
+  // Mirror public/_headers so the local harness behaves like a real host:
+  // hashed Next chunks + wasm/models cache hard, HTML revalidates.
+  const normalized = found.file.split(sep).join('/');
+  const cacheControl = /\.html?$/.test(normalized)
+    ? 'public, max-age=0, must-revalidate'
+    : normalized.includes('/_next/static/')
+      ? 'public, max-age=31536000, immutable'
+      : /\.(js|css|woff2?|png|jpe?g|webp|svg|ico)$/.test(normalized)
+        ? 'public, max-age=604800'
+        : 'no-store';
   response.writeHead(200, {
     'Content-Type': type,
     'Content-Length': found.stats.size,
     // Mirrors public/_headers so the browser behaves the same here as on a real host.
     'X-Content-Type-Options': 'nosniff',
     'Referrer-Policy': 'strict-origin-when-cross-origin',
-    'Cache-Control': 'no-store',
+    'Cache-Control': cacheControl,
   });
 
   if (request.method === 'HEAD') {

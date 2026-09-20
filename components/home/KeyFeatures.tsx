@@ -24,6 +24,7 @@ export function KeyFeatures() {
       id="key-features"
       aria-labelledby="key-features-heading"
       className="relative w-full bg-[#F1E8D8] pt-6 sm:pt-10 overflow-hidden transition-colors duration-200"
+      style={{ contentVisibility: 'auto', containIntrinsicSize: '1px 700px' }}
     >
       {/* Narrative Bridge: Transition from Real-World Situations to Core Capabilities */}
       <div className="mx-auto flex max-w-6xl flex-col items-center justify-center px-4 pb-4 sm:pb-6 text-center">
@@ -57,11 +58,12 @@ export function KeyFeatures() {
         <Image
           src="/key-features.jpg"
           alt="Key Features: More ways to communicate. A more inclusive world. SignSpeak brings together sign language, text, and speech to make communication simpler, faster, and more human. Features: 1. Indian Sign Language Recognition (Detects and understands ISL gestures in real time). 2. Text & Speech Support (Convert between speech, text, and ISL for smooth conversations). 3. Emergency Mode (Quick access to essential phrases when every second matters). 4. Built for Real People (Designed for hospitals, clinics, public spaces, and everyday use). 5. Privacy First (Your conversations stay private and secure). 6. More Inclusive Spaces (Helping create a kinder, more accessible society for everyone). Philosophy: Technology is a bridge. People make it meaningful. SignSpeak is more than a tool — it's a step towards fairer, kinder, and more connected communities."
-          width={2048}
-          height={1152}
+          width={1600}
+          height={900}
           sizes="100vw"
           className="w-full h-auto block"
           loading="lazy"
+          fetchPriority="low"
         />
 
       </div>

@@ -1,46 +1,48 @@
 'use client';
 
 /**
- * Application shell: skip link, header with live device status, main region, footer and
- * a mobile bottom navigation bar.
+ * SignSpeak Application Shell & Navigation Bar.
  *
- * Navigation contract (docs/ui-ux-specification.md §2 and §4):
- *   - every screen is reachable from every other screen (no dead ends);
- *   - a skip link jumps straight to the main region;
- *   - the header pills state, at all times, whether the camera and microphone are on;
- *   - on phones the four primary destinations sit in a thumb-reachable bottom bar.
+ * Design & Layout:
+ * - Desktop order: SignSpeak Logo | Home | Conversation | Quick Phrases | Emergency | Theme Toggle | Profile
+ * - Healthcare-focused, calm wabi-sabi palette (#F1E8D8 warm beige, #71856A bamboo sage,
+ *   #3F5745 deep bamboo, #292D38 charcoal text, #D5C4A8 sand borders, #C04838 emergency red).
+ * - Compact profile dropdown hosting user badge, Settings, Help & Support, and Sign Out.
+ * - Mobile responsive header with hamburger menu + persistent 4-destination mobile bottom tab bar.
+ * - Dedicated camera & mic controls live in the Conversation workspace, keeping the global navbar clean.
  */
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { BrandLockup, BrandMark } from '@/components/layout/BrandMark';
 import { Icon, type IconName } from '@/components/ui/Icon';
-import { StatusPill } from '@/components/ui/Badge';
 import { cameraPill, micPill, useDeviceStatus } from '@/lib/state/device-status';
 import { useSettings } from '@/lib/state/settings';
 import { cn } from '@/lib/utils/cn';
 
-interface NavItem {
+export interface NavItem {
   href: string;
   label: string;
   icon: IconName;
-  /** Shown in the mobile bottom bar. */
-  primary?: boolean;
+  isEmergency?: boolean;
 }
 
-const NAV_ITEMS: NavItem[] = [
-  { href: '/', label: 'Home', icon: 'home', primary: true },
-  { href: '/talk/', label: 'Conversation', icon: 'users', primary: true },
-  { href: '/phrases/', label: 'Phrases', icon: 'list', primary: true },
-  { href: '/emergency/', label: 'Emergency', icon: 'siren', primary: true },
-  { href: '/settings/', label: 'Settings', icon: 'settings' },
-  { href: '/help/', label: 'Help', icon: 'help' },
+const PRIMARY_NAV_ITEMS: NavItem[] = [
+  { href: '/', label: 'Home', icon: 'home' },
+  { href: '/talk/', label: 'Conversation', icon: 'message-square' },
+  { href: '/phrases/', label: 'Quick Phrases', icon: 'book-open' },
+  { href: '/emergency/', label: 'Emergency', icon: 'alert', isEmergency: true },
 ];
 
-function resolveIcon(icon: IconName): IconName {
-  return icon;
-}
+const ALL_PREFETCH_ROUTES = [
+  '/',
+  '/talk/',
+  '/phrases/',
+  '/emergency/',
+  '/settings/',
+  '/help/',
+];
 
 function isActive(pathname: string, href: string): boolean {
   const normPath = pathname.endsWith('/') ? pathname : `${pathname}/`;
@@ -64,102 +66,173 @@ export function SiteHeader() {
   const pathname = usePathname();
   const router = useRouter();
   const [pendingHref, setPendingHref] = useState<string | null>(null);
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [signedOutNote, setSignedOutNote] = useState(false);
+
+  const profileRef = useRef<HTMLDivElement>(null);
+  const mobileMenuRef = useRef<HTMLDivElement>(null);
+
   const { camera, mic } = useDeviceStatus();
   const { settings, update } = useSettings();
   const cameraState = cameraPill(camera);
   const micState = micPill(mic);
 
-  // Eagerly prefetch routes in client router cache
+  // Eagerly prefetch core routes into client router cache
   useEffect(() => {
-    NAV_ITEMS.forEach((item) => {
+    ALL_PREFETCH_ROUTES.forEach((href) => {
       try {
-        router.prefetch(item.href);
+        router.prefetch(href);
       } catch {
         // Safe fallback
       }
     });
   }, [router]);
 
-  // Clear pending indicator once the new pathname mounts
+  // Clear pending indicator and close menus on route change
   useEffect(() => {
     setPendingHref(null);
+    setIsProfileOpen(false);
+    setMobileMenuOpen(false);
   }, [pathname]);
 
+  // Handle click outside & keyboard accessibility (Escape key)
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (profileRef.current && !profileRef.current.contains(event.target as Node)) {
+        setIsProfileOpen(false);
+      }
+      if (mobileMenuRef.current && !mobileMenuRef.current.contains(event.target as Node)) {
+        setMobileMenuOpen(false);
+      }
+    }
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === 'Escape') {
+        setIsProfileOpen(false);
+        setMobileMenuOpen(false);
+      }
+    }
+
+    if (isProfileOpen || mobileMenuOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+      document.addEventListener('keydown', handleKeyDown);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isProfileOpen, mobileMenuOpen]);
+
+  const handleSignOut = () => {
+    setIsProfileOpen(false);
+    setMobileMenuOpen(false);
+    setSignedOutNote(true);
+    setTimeout(() => {
+      setSignedOutNote(false);
+      if (typeof window !== 'undefined' && pathname !== '/') {
+        router.push('/');
+      }
+    }, 1500);
+  };
+
   return (
-    <header className="sticky top-0 z-40 border-b border-sand bg-bg/90 backdrop-blur-md transition-colors duration-200">
+    <header className="sticky top-0 z-40 bg-[#F1E8D8]/95 dark:bg-bg/95 backdrop-blur-md transition-colors duration-200 py-2 sm:py-2.5 px-3 sm:px-6">
       {/* Instant navigation loading progress line */}
       {pendingHref ? (
         <div className="absolute top-0 inset-x-0 h-0.5 bg-bamboo-deep z-50 animate-pulse" />
       ) : null}
-      <div className="mx-auto flex w-full max-w-7xl items-center justify-between gap-x-4 px-4 py-2 sm:px-6 sm:py-2.5">
-        {/* Brand logo */}
+
+      {/* Screen-reader accessible device status announcements */}
+      <div className="opacity-0 pointer-events-none select-none absolute -z-50 text-[1px] leading-none" aria-live="polite">
+        <div>{cameraState.label}</div>
+        <div>{micState.label}</div>
+      </div>
+
+      {/* Floating Pill Navbar Container */}
+      <div className="mx-auto flex w-full max-w-7xl items-center justify-between gap-x-3 rounded-full border border-[#D5C4A8] bg-[#FAF6EE]/95 dark:bg-surface/95 px-3 py-1.5 sm:px-5 sm:py-2 shadow-xs transition-colors duration-200">
+        
+        {/* 1. SignSpeak Logo (Clickable -> Home) */}
         <Link
           href="/"
-          className="rounded-xl py-0.5 focus-visible:outline focus-visible:outline-3 shrink-0"
+          onClick={() => {
+            if (pathname !== '/') setPendingHref('/');
+          }}
+          className="rounded-full py-0.5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-bamboo-deep shrink-0 transition-opacity hover:opacity-90"
           aria-label="SignSpeak home"
         >
           <span className="hidden sm:block">
-            <BrandLockup compact />
+            <BrandLockup compact={false} subtitle="People Understand People" />
           </span>
           <span className="flex sm:hidden">
-            <BrandMark size={34} labelled />
+            <BrandMark size={32} labelled />
           </span>
         </Link>
 
-        {/* Center pill navigation capsule */}
-        <nav aria-label="Main" className="hidden lg:block">
-          <ul className="flex items-center gap-1 rounded-full border border-sand bg-surface/85 px-2 py-1 shadow-xs">
-            {NAV_ITEMS.map((item) => {
-              const active = pendingHref ? pendingHref === item.href : isActive(pathname, item.href);
+        {/* 2. Desktop Primary Navigation */}
+        <nav aria-label="Main" className="hidden lg:flex items-center gap-1.5">
+          {PRIMARY_NAV_ITEMS.map((item) => {
+            const active = pendingHref ? pendingHref === item.href : isActive(pathname, item.href);
+
+            if (item.isEmergency) {
               return (
-                <li key={item.href}>
-                  <Link
-                    href={item.href}
-                    prefetch={true}
-                    onClick={() => {
-                      if (pathname !== item.href) {
-                        setPendingHref(item.href);
-                      }
-                    }}
-                    aria-current={active ? 'page' : undefined}
-                    className={cn(
-                      'relative px-3.5 py-1.5 text-xs font-medium rounded-full transition-all duration-100',
-                      active
-                        ? 'font-semibold text-bamboo-deep bg-sand/30 after:absolute after:bottom-0 after:left-3 after:right-3 after:h-0.5 after:bg-bamboo-deep after:rounded-full'
-                        : 'text-charcoal/80 hover:text-bamboo-deep hover:bg-raised/70',
-                    )}
-                  >
-                    {item.label}
-                  </Link>
-                </li>
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  prefetch={true}
+                  onClick={() => {
+                    if (pathname !== item.href) setPendingHref(item.href);
+                  }}
+                  aria-current={active ? 'page' : undefined}
+                  className={cn(
+                    'inline-flex items-center gap-1.5 rounded-full px-4 py-1.5 text-xs sm:text-sm font-semibold transition-all duration-150 shadow-xs active:scale-[0.98]',
+                    'bg-[#C04838] hover:bg-[#A83B2D] text-white',
+                    active && 'ring-2 ring-offset-2 ring-[#C04838]',
+                  )}
+                >
+                  <Icon name="alert" size="1.05rem" className="text-white" />
+                  <span>{item.label}</span>
+                </Link>
               );
-            })}
-          </ul>
+            }
+
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                prefetch={true}
+                onClick={() => {
+                  if (pathname !== item.href) setPendingHref(item.href);
+                }}
+                aria-current={active ? 'page' : undefined}
+                className={cn(
+                  'inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs sm:text-sm font-medium transition-all duration-150',
+                  active
+                    ? 'bg-[#EAE2D2] text-[#292D38] dark:bg-raised dark:text-ink font-semibold shadow-xs'
+                    : 'text-[#292D38]/80 dark:text-ink/80 hover:text-[#3F5745] dark:hover:text-primary hover:bg-[#EAE2D2]/50',
+                )}
+              >
+                <Icon
+                  name={item.icon}
+                  size="1.05rem"
+                  className={active ? 'text-[#3F5745] dark:text-primary' : 'text-[#292D38]/70 dark:text-ink/70'}
+                />
+                <span>{item.label}</span>
+              </Link>
+            );
+          })}
         </nav>
 
-        {/* Right side controls: status pills, theme toggle, profile */}
+        {/* 3. Right Controls: Divider, Theme Toggle & Profile Dropdown */}
         <div className="flex items-center gap-2 sm:gap-2.5">
-          {/* Persistent device indicators */}
-          <div className="hidden items-center gap-2 sm:flex">
-            <StatusPill
-              dot
-              tone={cameraState.tone === 'neutral' ? 'neutral' : cameraState.tone}
-              icon={cameraState.icon}
-              label={cameraState.label}
-            />
-            <StatusPill
-              dot
-              tone={micState.tone === 'neutral' ? 'neutral' : micState.tone}
-              icon={micState.icon}
-              label={micState.label}
-            />
-          </div>
+          {/* Subtle vertical divider on desktop */}
+          <div className="hidden lg:block h-5 w-px bg-[#D5C4A8]/80 dark:bg-line mx-1" aria-hidden="true" />
 
           {/* Theme toggle button */}
           <button
             type="button"
             onClick={() => update('theme', settings.theme === 'dark' ? 'day' : 'dark')}
-            className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-line bg-raised/80 text-muted hover:text-ink hover:bg-raised transition-colors shadow-xs"
+            className="inline-flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-full border border-[#D5C4A8] bg-[#FAF6EE] dark:bg-raised text-[#292D38]/85 dark:text-ink hover:text-[#3F5745] dark:hover:text-primary hover:bg-[#EAE2D2]/50 transition-colors shadow-xs"
             aria-label={`Switch to ${settings.theme === 'dark' ? 'light' : 'dark'} mode`}
             title={`Switch to ${settings.theme === 'dark' ? 'light' : 'dark'} mode`}
           >
@@ -175,30 +248,236 @@ export function SiteHeader() {
             )}
           </button>
 
-          {/* Warm terracotta avatar pill */}
-          <Link
-            href="/settings/"
-            className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-terracotta text-white font-medium shadow-xs transition-transform hover:scale-105 active:scale-95"
-            aria-label="User settings"
-          >
-            <span className="text-xs font-semibold leading-none">SS</span>
-          </Link>
+          {/* Desktop Profile Dropdown Container */}
+          <div ref={profileRef} className="relative hidden lg:block">
+            <button
+              type="button"
+              onClick={() => setIsProfileOpen((prev) => !prev)}
+              aria-label="User profile and navigation menu"
+              aria-expanded={isProfileOpen}
+              aria-haspopup="menu"
+              className="flex items-center gap-1.5 rounded-full p-0.5 pr-2 border border-[#D5C4A8] bg-[#FAF6EE] dark:bg-raised text-[#292D38] hover:bg-[#EAE2D2]/50 transition-colors shadow-xs"
+            >
+              <span className="flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-full bg-[#3F5745] text-white text-xs font-semibold leading-none shadow-xs">
+                SS
+              </span>
+              <Icon
+                name="chevron-down"
+                size="0.85rem"
+                className={cn('text-[#292D38]/70 transition-transform duration-150', isProfileOpen && 'rotate-180')}
+              />
+            </button>
 
-          <Link
-            href="/help/"
-            className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-line bg-raised/80 text-muted transition-colors hover:bg-raised hover:text-ink lg:hidden"
-            aria-label="Help, privacy and limitations"
+            {/* Dropdown Menu Card */}
+            {isProfileOpen ? (
+              <div
+                role="menu"
+                aria-label="Profile and settings options"
+                className="absolute right-0 top-full mt-2 w-60 rounded-2xl border border-[#D5C4A8] bg-[#FAF6EE] dark:bg-surface p-2.5 shadow-lg z-50 animate-in fade-in zoom-in-95 duration-100"
+              >
+                {/* User Identity Header */}
+                <div className="flex items-center gap-2.5 px-2.5 py-2">
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#3F5745] text-white font-semibold text-xs shadow-xs">
+                    SS
+                  </div>
+                  <div className="flex flex-col min-w-0">
+                    <span className="font-semibold text-xs sm:text-sm text-[#292D38] dark:text-ink truncate">
+                      Student
+                    </span>
+                    <span className="text-[11px] text-[#292D38]/60 dark:text-muted truncate">
+                      Using SignSpeak
+                    </span>
+                  </div>
+                </div>
+
+                <div className="my-1.5 h-px bg-[#D5C4A8]/60 dark:bg-line" aria-hidden="true" />
+
+                {/* Dropdown Links */}
+                <Link
+                  role="menuitem"
+                  href="/settings/"
+                  onClick={() => setIsProfileOpen(false)}
+                  className="flex items-center gap-2.5 rounded-xl px-2.5 py-2 text-xs sm:text-sm font-medium text-[#292D38] dark:text-ink hover:bg-[#EAE2D2]/60 dark:hover:bg-raised transition-colors"
+                >
+                  <Icon name="settings" size="1.05rem" className="text-[#3F5745] dark:text-primary" />
+                  <span>Settings</span>
+                </Link>
+
+                <Link
+                  role="menuitem"
+                  href="/help/"
+                  onClick={() => setIsProfileOpen(false)}
+                  className="flex items-center gap-2.5 rounded-xl px-2.5 py-2 text-xs sm:text-sm font-medium text-[#292D38] dark:text-ink hover:bg-[#EAE2D2]/60 dark:hover:bg-raised transition-colors"
+                >
+                  <Icon name="help" size="1.05rem" className="text-[#3F5745] dark:text-primary" />
+                  <span>Help & Support</span>
+                </Link>
+
+                <div className="my-1.5 h-px bg-[#D5C4A8]/60 dark:bg-line" aria-hidden="true" />
+
+                {/* Sign Out Action */}
+                <button
+                  role="menuitem"
+                  type="button"
+                  onClick={handleSignOut}
+                  className="flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-xs sm:text-sm font-medium text-[#292D38] dark:text-ink hover:bg-[#F7E5DE] hover:text-[#C04838] transition-colors cursor-pointer text-left"
+                >
+                  <Icon name="log-out" size="1.05rem" className="text-[#C04838]" />
+                  <span>Sign Out</span>
+                </button>
+              </div>
+            ) : null}
+          </div>
+
+          {/* Mobile Hamburger Menu Toggle Button */}
+          <button
+            type="button"
+            onClick={() => setMobileMenuOpen((prev) => !prev)}
+            aria-label="Open navigation menu"
+            aria-expanded={mobileMenuOpen}
+            className="inline-flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-full border border-[#D5C4A8] bg-[#FAF6EE] dark:bg-raised text-[#292D38] hover:bg-[#EAE2D2]/50 transition-colors lg:hidden shadow-xs"
           >
-            <Icon name="help" size="1.1rem" />
-          </Link>
+            <Icon name="menu" size="1.15rem" />
+          </button>
         </div>
       </div>
 
-      {/* Compact device indicators for mobile screens */}
-      <div className="flex items-center gap-2 overflow-x-auto border-t border-line px-3 py-1.5 sm:hidden">
-        <StatusPill dot tone={cameraState.tone} icon={cameraState.icon} label={cameraState.label} />
-        <StatusPill dot tone={micState.tone} icon={micState.icon} label={micState.label} />
-      </div>
+      {/* Sign Out Friendly Notice Banner */}
+      {signedOutNote ? (
+        <div className="fixed top-16 left-1/2 -translate-x-1/2 z-50 rounded-full border border-[#D5C4A8] bg-[#FAF6EE] px-4 py-2 text-xs sm:text-sm font-medium text-[#292D38] shadow-lg animate-in fade-in slide-in-from-top-2">
+          ✓ Signed out. Session refreshed.
+        </div>
+      ) : null}
+
+      {/* Mobile Sidebar Navigation Drawer */}
+      {mobileMenuOpen ? (
+        <div className="fixed inset-0 z-50 lg:hidden">
+          {/* Backdrop overlay */}
+          <div
+            className="fixed inset-0 bg-charcoal/40 backdrop-blur-xs transition-opacity"
+            onClick={() => setMobileMenuOpen(false)}
+            aria-hidden="true"
+          />
+
+          {/* Slide-over panel */}
+          <div
+            ref={mobileMenuRef}
+            className="fixed inset-y-0 right-0 z-50 w-full max-w-xs bg-[#FAF6EE] dark:bg-surface border-l border-[#D5C4A8] p-5 shadow-2xl flex flex-col justify-between overflow-y-auto animate-in slide-in-from-right duration-200"
+          >
+            <div>
+              {/* Drawer Header */}
+              <div className="flex items-center justify-between pb-4 border-b border-[#D5C4A8]/60">
+                <BrandLockup compact subtitle="People Understand People" />
+                <button
+                  type="button"
+                  onClick={() => setMobileMenuOpen(false)}
+                  aria-label="Close menu"
+                  className="rounded-full p-1.5 text-[#292D38]/70 hover:bg-[#EAE2D2]/60 hover:text-[#292D38] transition-colors"
+                >
+                  <Icon name="x" size="1.25rem" />
+                </button>
+              </div>
+
+              {/* Navigation Links */}
+              <nav className="mt-5 space-y-1.5">
+                <Link
+                  href="/"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className={cn(
+                    'flex items-center gap-3 rounded-2xl px-3.5 py-2.5 text-sm font-semibold transition-colors',
+                    isActive(pathname, '/')
+                      ? 'bg-[#EAE2D2] text-[#292D38] dark:bg-raised dark:text-ink'
+                      : 'text-[#292D38]/80 hover:bg-[#EAE2D2]/50 hover:text-[#292D38]',
+                  )}
+                >
+                  <Icon name="home" size="1.15rem" className="text-[#3F5745] dark:text-primary" />
+                  <span>Home</span>
+                </Link>
+
+                <Link
+                  href="/talk/"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className={cn(
+                    'flex items-center gap-3 rounded-2xl px-3.5 py-2.5 text-sm font-semibold transition-colors',
+                    isActive(pathname, '/talk/')
+                      ? 'bg-[#EAE2D2] text-[#292D38] dark:bg-raised dark:text-ink'
+                      : 'text-[#292D38]/80 hover:bg-[#EAE2D2]/50 hover:text-[#292D38]',
+                  )}
+                >
+                  <Icon name="message-square" size="1.15rem" className="text-[#3F5745] dark:text-primary" />
+                  <span>Conversation</span>
+                </Link>
+
+                <Link
+                  href="/phrases/"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className={cn(
+                    'flex items-center gap-3 rounded-2xl px-3.5 py-2.5 text-sm font-semibold transition-colors',
+                    isActive(pathname, '/phrases/')
+                      ? 'bg-[#EAE2D2] text-[#292D38] dark:bg-raised dark:text-ink'
+                      : 'text-[#292D38]/80 hover:bg-[#EAE2D2]/50 hover:text-[#292D38]',
+                  )}
+                >
+                  <Icon name="book-open" size="1.15rem" className="text-[#3F5745] dark:text-primary" />
+                  <span>Quick Phrases</span>
+                </Link>
+
+                {/* Emergency Item with distinct red styling */}
+                <Link
+                  href="/emergency/"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className={cn(
+                    'flex items-center gap-3 rounded-2xl px-3.5 py-2.5 text-sm font-semibold transition-all',
+                    'bg-[#F7E5DE] text-[#C04838] border border-[#F0CEC4] hover:bg-[#F2D6CD]',
+                  )}
+                >
+                  <Icon name="alert" size="1.15rem" className="text-[#C04838]" />
+                  <span>Emergency</span>
+                </Link>
+
+                <div className="my-3 h-px bg-[#D5C4A8]/60" aria-hidden="true" />
+
+                <Link
+                  href="/settings/"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="flex items-center gap-3 rounded-2xl px-3.5 py-2.5 text-sm font-medium text-[#292D38]/80 hover:bg-[#EAE2D2]/50 hover:text-[#292D38] transition-colors"
+                >
+                  <Icon name="settings" size="1.15rem" className="text-[#3F5745] dark:text-primary" />
+                  <span>Settings</span>
+                </Link>
+
+                <Link
+                  href="/help/"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="flex items-center gap-3 rounded-2xl px-3.5 py-2.5 text-sm font-medium text-[#292D38]/80 hover:bg-[#EAE2D2]/50 hover:text-[#292D38] transition-colors"
+                >
+                  <Icon name="help" size="1.15rem" className="text-[#3F5745] dark:text-primary" />
+                  <span>Help & Support</span>
+                </Link>
+
+                <button
+                  type="button"
+                  onClick={handleSignOut}
+                  className="flex w-full items-center gap-3 rounded-2xl px-3.5 py-2.5 text-sm font-medium text-[#292D38]/80 hover:bg-[#F7E5DE] hover:text-[#C04838] transition-colors cursor-pointer text-left"
+                >
+                  <Icon name="log-out" size="1.15rem" className="text-[#C04838]" />
+                  <span>Sign Out</span>
+                </button>
+              </nav>
+            </div>
+
+            {/* Mobile Drawer Footer with Gentle Encouragement */}
+            <div className="pt-6 border-t border-[#D5C4A8]/60 text-center">
+              <p className="font-serif italic text-xs text-[#71856A]">
+                Communication creates care ♡
+              </p>
+              <p className="mt-1 text-[10px] uppercase tracking-wider text-[#292D38]/50">
+                Inclusion Today · A Brighter Tomorrow
+              </p>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </header>
   );
 }
@@ -243,21 +522,27 @@ export function SiteFooter() {
 export function MobileTabBar() {
   const pathname = usePathname();
   const [pendingHref, setPendingHref] = useState<string | null>(null);
-  const primary = NAV_ITEMS.filter((item) => item.primary);
 
   useEffect(() => {
     setPendingHref(null);
   }, [pathname]);
 
+  const items: NavItem[] = [
+    { href: '/', label: 'Home', icon: 'home' },
+    { href: '/talk/', label: 'Conversation', icon: 'message-square' },
+    { href: '/phrases/', label: 'Phrases', icon: 'book-open' },
+    { href: '/emergency/', label: 'Emergency', icon: 'alert', isEmergency: true },
+  ];
+
   return (
     <nav
       aria-label="Primary"
-      className="fixed inset-x-0 bottom-0 z-40 border-t border-sand bg-bg/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-md lg:hidden"
+      className="fixed inset-x-0 bottom-0 z-40 border-t border-[#D5C4A8] bg-[#FAF6EE]/95 dark:bg-surface/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-md lg:hidden shadow-lg transition-colors"
     >
-      <ul className="mx-auto grid max-w-3xl grid-cols-4">
-        {primary.map((item) => {
+      <ul className="mx-auto grid max-w-lg grid-cols-4 px-2 py-1">
+        {items.map((item) => {
           const active = pendingHref ? pendingHref === item.href : isActive(pathname, item.href);
-          const isEmergency = item.href.startsWith('/emergency');
+
           return (
             <li key={item.href}>
               <Link
@@ -270,12 +555,30 @@ export function MobileTabBar() {
                 }}
                 aria-current={active ? 'page' : undefined}
                 className={cn(
-                  'flex min-h-touch flex-col items-center justify-center gap-0.5 px-1 py-2 text-xs font-semibold transition-colors duration-100',
-                  active ? 'text-bamboo-deep' : isEmergency ? 'text-danger' : 'text-charcoal/70',
+                  'relative flex min-h-[3.25rem] flex-col items-center justify-center gap-0.5 rounded-xl px-2 py-1.5 text-[11px] font-semibold transition-all duration-150',
+                  item.isEmergency
+                    ? 'text-[#C04838] hover:bg-[#F7E5DE]/50'
+                    : active
+                      ? 'text-[#3F5745] dark:text-primary font-bold'
+                      : 'text-[#292D38]/70 dark:text-ink/70 hover:text-[#292D38]',
                 )}
               >
-                <Icon name={resolveIcon(item.icon)} size="1.35rem" />
-                {item.label}
+                <Icon
+                  name={item.icon}
+                  size="1.25rem"
+                  className={cn(
+                    item.isEmergency
+                      ? 'text-[#C04838]'
+                      : active
+                        ? 'text-[#3F5745] dark:text-primary'
+                        : 'text-[#292D38]/70 dark:text-ink/70',
+                  )}
+                />
+                <span>{item.label}</span>
+                {/* Active route indicator bar matching mockup */}
+                {active && !item.isEmergency ? (
+                  <span className="absolute bottom-1 h-0.5 w-6 rounded-full bg-[#3F5745] dark:bg-primary" />
+                ) : null}
               </Link>
             </li>
           );
