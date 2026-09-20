@@ -112,6 +112,7 @@ export function CameraPanel({
     lowFps,
     handCount,
     latestAccepted,
+    detectedGesture,
     cameraFailure,
     landmarkerFailure,
     modelUnavailable,
@@ -430,7 +431,11 @@ export function CameraPanel({
                 over them: the camera column is narrow, so a centred banner covered the FPS and
                 hand count exactly when they mattered. Static, not pulsing — the overlay never
                 animates on its own (docs/ui-ux-specification.md §1). */}
-            {guideVisible ? (
+            {detectedGesture ? (
+              <p className="overlay-chip self-start rounded-full bg-[#596F57] border border-white/20 px-[12px] py-[4px] text-[12px] font-bold leading-[16px] text-white shadow-md animate-pulse">
+                👋 {detectedGesture.label} (Wave detected)
+              </p>
+            ) : guideVisible ? (
               <p className="overlay-chip self-start rounded-full px-[10px] py-[4px] text-[11px] font-medium leading-[15px] text-white">
                 Hold both hands inside the frame
               </p>
@@ -555,6 +560,32 @@ export function CameraPanel({
           {modelError ?? 'No sign-recognition model is installed in this build.'} You can still see
           the hand-tracking preview. Use the phrase board to communicate.
         </Callout>
+      ) : null}
+
+      {/* Wave gesture visual confirmation badge */}
+      {detectedGesture ? (
+        <div
+          role="status"
+          aria-live="polite"
+          className="flex items-center justify-between gap-3 rounded-2xl border-2 border-[#596F57]/40 bg-[#E3EADF] p-4 text-[#2D402B] shadow-sm transition-all"
+        >
+          <div className="flex items-center gap-3">
+            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#596F57]/20 text-2xl">
+              👋
+            </span>
+            <div>
+              <p className="font-bold text-base text-[#2D402B]">
+                {detectedGesture.label}
+              </p>
+              <p className="text-xs text-[#596F57]">
+                Wave gesture recognised &middot; Greeting sent to conversation
+              </p>
+            </div>
+          </div>
+          <Badge tone="success" icon="hand">
+            Wave detected
+          </Badge>
+        </div>
       ) : null}
 
       {/* Accepted chip, awaiting review. */}

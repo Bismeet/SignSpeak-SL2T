@@ -47,9 +47,11 @@ import {
 import { useModel } from '@/lib/state/model-provider';
 import { useSettings } from '@/lib/state/settings';
 import { drawHandOverlay, SIMULATED_OCCLUDED_INDICES } from '@/lib/vision/hand-skeleton';
+import { WaveDetector } from '@/lib/vision/wave-detector';
 import type {
   CameraStatus,
   ConfidenceBand,
+  DetectedGesture,
   FrameLandmarks,
   MessageAlternative,
   Prediction,
@@ -85,11 +87,15 @@ export interface RecognitionSnapshot {
   landmarkCompleteness: number;
   /** True when occlusion is detected or simulated. */
   isOccluded: boolean;
+  /** Active rule-based gesture (e.g. wave greeting "Hello! 👋"), or null. */
+  detectedGesture: DetectedGesture | null;
 }
 
 export interface UseSignRecognitionOptions {
   /** Called once per newly accepted, stable sign (never on repeat frames). */
   onAccepted?: (sign: AcceptedSign) => void;
+  /** Called once per detected rule-based gesture (e.g. wave). */
+  onGesture?: (gesture: DetectedGesture) => void;
 }
 
 export interface UseSignRecognitionResult extends RecognitionSnapshot {
@@ -176,6 +182,14 @@ export function useSignRecognition(
   const { availability, ensureClassifier } = useModel();
   const onAcceptedRef = useRef(options.onAccepted);
   onAcceptedRef.current = options.onAccepted;
+  const onGestureRef = useRef(options.onGesture);
+  onGestureRef.current = options.onGesture;
+
+  const waveDetectorRef = useRef<WaveDetector | null>(null);
+  if (!waveDetectorRef.current) {
+    waveDetectorRef.current = new WaveDetector();
+  }
+  const gestureTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const overlayCanvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -191,6 +205,7 @@ export function useSignRecognition(
     latestAccepted: null,
     landmarkCompleteness: 1,
     isOccluded: false,
+    detectedGesture: null,
   });
   const [cameraFailure, setCameraFailure] = useState<CameraFailure | null>(null);
   const [landmarkerFailure, setLandmarkerFailure] = useState<LandmarkerFailure | null>(null);
@@ -334,6 +349,26 @@ export function useSignRecognition(
       // feature extraction + sign-clf-v1.onnx classifier below. `video` is null during a
       // landmark replay, which is fine — the overlay then uses the canvas' own pixel box.
       drawOverlay(frame, video);
+
+      // Check rule-based wave gesture (e.g. "Hello! 👋")
+      const waveResult = waveDetectorRef.current?.update(frame);
+      if (waveResult?.detected) {
+        const gesture: DetectedGesture = {
+          type: 'wave',
+          label: 'Hello! 👋',
+          timestamp: waveResult.timestampMs,
+        };
+        publish({ detectedGesture: gesture });
+        onGestureRef.current?.(gesture);
+
+        if (gestureTimeoutRef.current) {
+          clearTimeout(gestureTimeoutRef.current);
+        }
+        gestureTimeoutRef.current = setTimeout(() => {
+          publish({ detectedGesture: null });
+        }, 2500);
+      }
+
       const classifier = await ensureClassifier();
 
       if (!classifier) {
@@ -536,6 +571,12 @@ export function useSignRecognition(
     consecutiveRejectionsRef.current = 0;
     phraseBoardPromptedRef.current = false;
 
+    if (gestureTimeoutRef.current) {
+      clearTimeout(gestureTimeoutRef.current);
+      gestureTimeoutRef.current = null;
+    }
+    waveDetectorRef.current?.reset();
+
     setReplaying(false);
     setSuggestPhraseBoard(false);
     setSnapshot({
@@ -549,6 +590,7 @@ export function useSignRecognition(
       latestAccepted: null,
       landmarkCompleteness: 1,
       isOccluded: false,
+      detectedGesture: null,
     });
   }, []);
 
@@ -745,6 +787,7 @@ export function useSignRecognition(
     return () => {
       runningRef.current = false;
       if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
+      if (gestureTimeoutRef.current) clearTimeout(gestureTimeoutRef.current);
       stopStream(streamRef.current);
       landmarkerRef.current?.close();
       landmarkerRef.current = null;

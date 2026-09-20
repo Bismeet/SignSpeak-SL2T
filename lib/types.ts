@@ -321,11 +321,18 @@ export type ConversationParty = 'deaf_user' | 'hearing_user' | 'system';
 
 export type MessageSource =
   | 'sign_recognition'
+  | 'gesture'
   | 'typed'
   | 'speech_recognition'
   | 'phrase_board'
   | 'emergency'
   | 'system';
+
+export interface DetectedGesture {
+  type: 'wave';
+  label: string;
+  timestamp: number;
+}
 
 export type ConfidenceBand = 'high' | 'medium' | 'low';
 

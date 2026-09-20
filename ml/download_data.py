@@ -54,8 +54,9 @@ DEFAULT_OUT = REPO_ROOT / "ml" / "data" / "isl-subset"
 DATASET_ID = "vidit031/isl-isolated-40words"
 METADATA_FILENAME = "metadata.csv"
 
-#: The vocabulary this model is trained on. `stop` was removed — see the module docstring.
-TARGET_WORDS: tuple[str, ...] = ("help", "water", "food", "hospital")
+#: The vocabulary this model is trained on. `food` and `hospital` were removed because
+#: they are not in `data/sign-vocabulary.json`. `stop` was removed due to lack of clips.
+TARGET_WORDS: tuple[str, ...] = ("help", "water", "yes", "no")
 
 #: Recorded for the model card so the exclusion is visible, not silently missing.
 EXCLUDED_WORDS: dict[str, str] = {
@@ -63,6 +64,15 @@ EXCLUDED_WORDS: dict[str, str] = {
         "Excluded: 4 clips total, 1 flagged 'Needs Manual Review', leaving 3 usable clips "
         "from 2 sources with no signer identity (CISLR hash, ISLRTC dictionary). Too few to "
         "train, and the source is dictionary-style rather than in-the-wild signing."
+    ),
+    "food": (
+        "Excluded: the dataset has 17 'food' clips, but FOOD is not a gloss in "
+        "data/sign-vocabulary.json. A model predicting it is rejected by the browser as "
+        "incompatible, because the app has no label or phrase for the word."
+    ),
+    "hospital": (
+        "Excluded: the dataset has 21 'hospital' clips (all from INCLUDE), but HOSPITAL is "
+        "not a published gloss. Same incompatibility as FOOD."
     ),
 }
 

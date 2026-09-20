@@ -35,7 +35,7 @@ import { appendLandmarkSample } from '@/lib/state/landmark-log';
 import { useSettings } from '@/lib/state/settings';
 import { useSignRecognition, type AcceptedSign } from '@/lib/vision/use-sign-recognition';
 import { createId } from '@/lib/utils/misc';
-import type { ConversationMessage, Phrase } from '@/lib/types';
+import type { ConversationMessage, DetectedGesture, Phrase } from '@/lib/types';
 import { cn } from '@/lib/utils/cn';
 
 export default function TalkPage() {
@@ -86,7 +86,32 @@ export default function TalkPage() {
     [dispatch, settings.autoSpeakRecognised, speaker],
   );
 
-  const recognition = useSignRecognition({ onAccepted: handleAccepted });
+  const handleGesture = useCallback(
+    (gesture: DetectedGesture) => {
+      if (gesture.type === 'wave') {
+        const id = createId('msg');
+        latestRecognitionIdRef.current = id;
+        dispatch({
+          type: 'add',
+          message: {
+            id,
+            party: 'deaf_user',
+            source: 'gesture',
+            text: 'Hello! 👋',
+          },
+        });
+        if (settings.autoSpeakRecognised) {
+          void speaker.speak('Hello', { language: 'en-IN' });
+        }
+      }
+    },
+    [dispatch, settings.autoSpeakRecognised, speaker],
+  );
+
+  const recognition = useSignRecognition({
+    onAccepted: handleAccepted,
+    onGesture: handleGesture,
+  });
 
   const handleConfirmSign = useCallback(() => {
     const id = latestRecognitionIdRef.current;

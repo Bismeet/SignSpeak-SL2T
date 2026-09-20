@@ -41,7 +41,18 @@ const VENV_PYTHON =
 const REQUIREMENTS = join('ml', MODE.requirements);
 
 /** Interpreters to try, in order. 3.12 first: it has wheels for every pinned package. */
-const CANDIDATES = ['py -3.12', 'python3.12', 'python3', 'python'];
+const CANDIDATES = [
+  process.env.PYTHON,
+  'py -3.12',
+  'python3.12',
+  'python3.11',
+  'python3',
+  'python',
+  process.env.USERPROFILE ? join(process.env.USERPROFILE, '.local', 'bin', 'python3.11.exe') : null,
+  process.env.USERPROFILE ? join(process.env.USERPROFILE, '.local', 'bin', 'python3.exe') : null,
+  process.env.APPDATA ? join(process.env.APPDATA, 'uv', 'python', 'cpython-3.11.16-windows-x86_64-none', 'python.exe') : null,
+  process.env.APPDATA ? join(process.env.APPDATA, 'uv', 'python', 'cpython-3.11-windows-x86_64-none', 'python.exe') : null,
+].filter(Boolean);
 
 function log(message) {
   process.stdout.write(`[ml:setup] ${message}\n`);
@@ -53,7 +64,10 @@ function run(command, args, options = {}) {
 }
 
 function probe(spec) {
-  const [command, ...args] = spec.split(' ');
+  if (!spec) return null;
+  const isDirectPath = existsSync(spec);
+  const command = isDirectPath ? spec : spec.split(' ')[0];
+  const args = isDirectPath ? [] : spec.split(' ').slice(1);
   const result = spawnSync(command, [...args, '--version'], { encoding: 'utf8', shell: false });
   if (result.status !== 0 || !result.stdout) return null;
   const match = /Python (\d+)\.(\d+)\.(\d+)/.exec(result.stdout.trim());
@@ -123,7 +137,9 @@ function main() {
 
   if (!existsSync(VENV_DIR)) {
     log(`Creating the virtual environment at ml/${MODE.venvDir} ...`);
-    const [command, ...args] = interpreter.spec.split(' ');
+    const isDirectPath = existsSync(interpreter.spec);
+    const command = isDirectPath ? interpreter.spec : interpreter.spec.split(' ')[0];
+    const args = isDirectPath ? [] : interpreter.spec.split(' ').slice(1);
     const created = run(command, [...args, '-m', 'venv', VENV_DIR]);
     if (created.status !== 0) {
       process.stderr.write('[ml:setup] Could not create the virtual environment.\n');
