@@ -36,6 +36,8 @@ def main():
             y_list.append(idx)
 
     x = np.array(x_list, dtype=np.float32)
+    x[:, 128:132] = 0.0
+    x[:, 158] = 0.0
     y_true = np.array(y_list, dtype=np.int64)
 
     session = ort.InferenceSession(str(ONNX_PATH))

@@ -455,10 +455,38 @@ export function useSignRecognition(
         return;
       }
 
-      const features = extractFeatureVector(frame);
+      let processedFrame = frame;
+      if (currentMode === 'alphabet' && frame.hands.length >= 2) {
+        const h0 = frame.hands[0];
+        const h1 = frame.hands[1];
+        if (h0 && h1 && h0.handedness === h1.handedness) {
+          const h0_x = h0.landmarks[0]?.x ?? 0;
+          const h1_x = h1.landmarks[0]?.x ?? 0;
+          processedFrame = {
+            ...frame,
+            hands: [
+              { ...h0, handedness: h0_x <= h1_x ? 'Left' : 'Right' },
+              { ...h1, handedness: h0_x <= h1_x ? 'Right' : 'Left' },
+            ],
+          };
+        }
+      }
+
+      const features = extractFeatureVector(processedFrame);
+      let inputVector = features.vector;
+      if (currentMode === 'alphabet') {
+        // Enforce pose-invariance: alphabet letters are purely hand-shape based
+        inputVector = new Float32Array(features.vector);
+        inputVector[128] = 0;
+        inputVector[129] = 0;
+        inputVector[130] = 0;
+        inputVector[131] = 0;
+        inputVector[158] = 0;
+      }
+
       let probabilities: number[];
       try {
-        probabilities = await classifier.predict(features.vector);
+        probabilities = await classifier.predict(inputVector);
       } catch (error) {
         // A single failed inference must not stop the loop.
         console.warn('[SignSpeak] Inference failed for this frame.', error);

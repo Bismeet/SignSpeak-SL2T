@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "modelVersion": "alphabet-clf-v1",
   "trainedOn": "2026-09-21",
-  "algorithm": "random_forest",
+  "algorithm": "random_forest_robust_augmented",
   "featureVersion": "ss-features-v1",
   "inputDim": 159,
   "vocabulary": [
@@ -67,17 +67,18 @@
   "trainingSource": "collected_consented_dataset",
   "notForRealUse": false,
   "decision": {
-    "confidenceThreshold": 0.35,
-    "marginThreshold": 0.05,
-    "minHandScore": 0.4,
+    "confidenceThreshold": 0.25,
+    "marginThreshold": 0.03,
+    "minHandScore": 0.35,
     "smoothing": {
-      "windowSize": 4,
-      "requiredVotes": 3
+      "windowSize": 3,
+      "requiredVotes": 2
     }
   },
   "metrics": {
-    "overallAccuracy": 1.0,
+    "validationAccuracy": 0.9958448753462604,
     "classCount": 27,
-    "sampleCount": 1600
+    "trainingVectorCount": 24516,
+    "validationVectorCount": 722
   }
 }
