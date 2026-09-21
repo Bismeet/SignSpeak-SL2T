@@ -105,3 +105,21 @@ describe('glossLabel', () => {
     expect(glossLabel('CALL_FAMILY_X')).toBe('Call Family X');
   });
 });
+
+describe('alphabet vocabulary', () => {
+  it('contains all 26 uppercase letters A through Z', () => {
+    for (let c = 65; c <= 90; c++) {
+      const letter = String.fromCharCode(c);
+      expect(isKnownGloss(letter)).toBe(true);
+      expect(findSign(letter)?.category).toBe('alphabet');
+    }
+  });
+
+  it('accepts the alphabet model vocabulary with negative class OTHER', () => {
+    const letters = Array.from({ length: 26 }, (_, i) => String.fromCharCode(65 + i));
+    const result = checkModelVocabulary([...letters, 'OTHER'], 'OTHER');
+    expect(result.ok).toBe(true);
+    expect(result.known).toEqual(letters);
+    expect(result.unknown).toEqual([]);
+  });
+});

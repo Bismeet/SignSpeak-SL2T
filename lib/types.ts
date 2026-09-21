@@ -227,7 +227,8 @@ export type SignCategory =
   | 'help'
   | 'people'
   | 'answers'
-  | 'symptoms';
+  | 'symptoms'
+  | 'alphabet';
 
 export interface SignVocabularyEntry {
   /** Uppercase gloss used as the class label, e.g. `PAIN`. */
@@ -321,6 +322,7 @@ export type ConversationParty = 'deaf_user' | 'hearing_user' | 'system';
 
 export type MessageSource =
   | 'sign_recognition'
+  | 'fingerspelling'
   | 'gesture'
   | 'typed'
   | 'speech_recognition'

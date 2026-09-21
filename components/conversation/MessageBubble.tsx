@@ -58,6 +58,7 @@ const PARTY_META: Record<
 
 const SOURCE_LABEL: Record<MessageSource, string> = {
   sign_recognition: 'Recognised from signing',
+  fingerspelling: 'Fingerspelled (A–Z)',
   gesture: 'Recognised gesture',
   typed: 'Typed',
   speech_recognition: 'Spoken, then transcribed',

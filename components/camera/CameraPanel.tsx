@@ -14,7 +14,7 @@
  *   - offer one-tap pause, and a working alternative in every failure state.
  */
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { Callout } from '@/components/ui/Callout';
@@ -86,6 +86,7 @@ export interface CameraPanelProps {
   onCorrect: (sign: AcceptedSign) => void;
   onReject: (sign: AcceptedSign) => void;
   onOpenPhraseBoard: () => void;
+  onSendFingerspelledSentence?: (text: string) => void;
   layout?: 'standard' | 'workspace';
   className?: string;
 }
@@ -96,6 +97,7 @@ export function CameraPanel({
   onCorrect,
   onReject,
   onOpenPhraseBoard,
+  onSendFingerspelledSentence,
   layout = 'workspace',
   className,
 }: CameraPanelProps) {
@@ -105,6 +107,11 @@ export function CameraPanel({
   // viewing adjustments, and none of them change what is analysed, stored or sent anywhere.
   const [feedOpacity, setFeedOpacity] = useState(0.8);
   const [strokeWeight, setStrokeWeight] = useState(1);
+
+  // Fingerspelling word assembler state
+  const [spelledText, setSpelledText] = useState('');
+  const [autoAddLetters, setAutoAddLetters] = useState(true);
+  const lastAcceptedLetterRef = useRef<string | null>(null);
 
   const {
     camera,
@@ -166,6 +173,21 @@ export function CameraPanel({
   }, [current, handCount]);
 
   const guideVisible = camera === 'streaming' && handCount === 0 && !replaying;
+
+  useEffect(() => {
+    if (recognition.mode !== 'alphabet' || !latestAccepted) return;
+    const letter = latestAccepted.label;
+    if (autoAddLetters && letter !== lastAcceptedLetterRef.current) {
+      lastAcceptedLetterRef.current = letter;
+      setSpelledText((prev) => prev + letter);
+    }
+  }, [latestAccepted, recognition.mode, autoAddLetters]);
+
+  useEffect(() => {
+    if (handCount === 0) {
+      lastAcceptedLetterRef.current = null;
+    }
+  }, [handCount]);
 
   /* ---------------------------------------------------------------------------------
    * Failure states — always with a route forward.
@@ -234,6 +256,188 @@ export function CameraPanel({
   }
 
   /* ---------------------------------------------------------------------------------
+   * Mode switcher & Fingerspelling assembler
+   * ------------------------------------------------------------------------------- */
+
+  const modeSwitcher = (
+    <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-[#D8CFBA] bg-[#FAF6EE] p-2">
+      <div className="flex items-center gap-1.5">
+        <button
+          type="button"
+          onClick={() => recognition.setMode('words')}
+          className={cn(
+            'flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-semibold transition-all',
+            recognition.mode === 'words'
+              ? 'bg-[#596F57] text-white shadow-sm'
+              : 'text-[#596F57] hover:bg-[#EAE5D9]',
+          )}
+        >
+          <Icon name="message-square" size="14px" />
+          <span>Words & Signs (8)</span>
+        </button>
+        <button
+          type="button"
+          onClick={() => recognition.setMode('alphabet')}
+          className={cn(
+            'flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-semibold transition-all',
+            recognition.mode === 'alphabet'
+              ? 'bg-[#596F57] text-white shadow-sm'
+              : 'text-[#596F57] hover:bg-[#EAE5D9]',
+          )}
+        >
+          <span className="font-mono text-xs font-bold">🔤</span>
+          <span>Fingerspelling (A–Z)</span>
+        </button>
+      </div>
+      <span className="text-[11px] font-medium text-muted px-1">
+        {recognition.mode === 'words'
+          ? 'Clinical words & wave greeting'
+          : 'Fingerspell names & custom sentences'}
+      </span>
+    </div>
+  );
+
+  const fingerspellingAssembler = (
+    <div className="rounded-2xl border-2 border-[#596F57]/40 bg-[#FAF6EE] p-4 text-[#2D402B] shadow-sm space-y-3">
+      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#D8CFBA]/60 pb-3">
+        <div className="flex items-center gap-3">
+          <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-[#596F57] text-white font-mono text-2xl font-bold shadow">
+            {latestAccepted ? latestAccepted.label : activeCandidate ? activeCandidate.label : '—'}
+          </span>
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="font-bold text-sm text-[#2D402B]">
+                {latestAccepted
+                  ? `Detected Letter: ${latestAccepted.label}`
+                  : activeCandidate
+                    ? `Candidate: ${activeCandidate.label}`
+                    : active
+                      ? 'Sign any letter with one hand (A–Z)'
+                      : 'Start camera to recognise letters from signing'}
+              </span>
+              {latestAccepted ? (
+                <Badge tone="success">
+                  {Math.round(latestAccepted.probability * 100)}% Match
+                </Badge>
+              ) : activeCandidate ? (
+                <Badge tone="neutral">
+                  {Math.round(activeCandidate.probability * 100)}%
+                </Badge>
+              ) : null}
+            </div>
+            <p className="text-xs text-[#71856A]">
+              ISL Single-Hand Alphabet · A through Z
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <label className="flex items-center gap-1.5 text-xs text-[#596F57] font-medium cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={autoAddLetters}
+              onChange={(e) => setAutoAddLetters(e.target.checked)}
+              className="rounded border-[#D8CFBA] text-[#596F57] focus:ring-[#596F57]"
+            />
+            Auto-add letter
+          </label>
+          <Button
+            size="sm"
+            variant="secondary"
+            icon="plus"
+            disabled={!latestAccepted && !activeCandidate}
+            onClick={() => {
+              const l = latestAccepted?.label ?? activeCandidate?.label;
+              if (l) {
+                setSpelledText((prev) => prev + l);
+                clearLatestAccepted();
+              }
+            }}
+          >
+            Add {latestAccepted?.label ?? activeCandidate?.label ?? 'Letter'}
+          </Button>
+        </div>
+      </div>
+
+      {/* Word Buffer Display */}
+      <div className="space-y-2">
+        <div className="flex items-center justify-between text-xs text-[#71856A] font-semibold">
+          <span>Spelled Word / Name Buffer:</span>
+          <span>
+            {spelledText.length} character{spelledText.length === 1 ? '' : 's'}
+          </span>
+        </div>
+        <input
+          type="text"
+          value={spelledText}
+          onChange={(e) => setSpelledText(e.target.value.toUpperCase())}
+          placeholder="Spell letters using signs or type here (e.g. BISMEET)..."
+          className="w-full rounded-xl border border-[#D8CFBA] bg-white px-3 py-2 font-mono text-xl font-bold tracking-wider text-[#2D402B] outline-none focus:border-[#596F57] shadow-inner"
+        />
+
+        {/* Quick Actions */}
+        <div className="flex flex-wrap items-center gap-2 pt-1">
+          <Button
+            size="sm"
+            variant="secondary"
+            onClick={() => setSpelledText((prev) => prev + ' ')}
+          >
+            ␣ Space
+          </Button>
+          <Button
+            size="sm"
+            variant="secondary"
+            disabled={spelledText.length === 0}
+            onClick={() => setSpelledText((prev) => prev.slice(0, -1))}
+          >
+            ⌫ Backspace
+          </Button>
+          <Button
+            size="sm"
+            variant="secondary"
+            disabled={spelledText.length === 0}
+            onClick={() => setSpelledText('')}
+          >
+            ✕ Clear
+          </Button>
+
+          <div className="ml-auto flex flex-wrap items-center gap-2">
+            <Button
+              size="sm"
+              variant="primary"
+              disabled={spelledText.trim().length === 0}
+              onClick={() => {
+                const raw = spelledText.trim();
+                const capitalized = raw
+                  .split(' ')
+                  .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+                  .join(' ');
+                const nameSentence = `My name is ${capitalized}`;
+                onSendFingerspelledSentence?.(nameSentence);
+                setSpelledText('');
+              }}
+              className="bg-[#596F57] hover:bg-[#485c46] text-white font-medium"
+            >
+              👤 Send: &quot;My name is {spelledText.trim() ? spelledText.trim() : '...'}&quot;
+            </Button>
+            <Button
+              size="sm"
+              variant="primary"
+              disabled={spelledText.trim().length === 0}
+              onClick={() => {
+                onSendFingerspelledSentence?.(spelledText.trim());
+                setSpelledText('');
+              }}
+            >
+              Send Word
+            </Button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  /* ---------------------------------------------------------------------------------
    * Not started
    * ------------------------------------------------------------------------------- */
 
@@ -241,14 +445,22 @@ export function CameraPanel({
     if (layout === 'workspace') {
       return (
         <div className={cn('space-y-4', className)}>
+          {modeSwitcher}
+
           {/* Wireframe camera preview box matching media_1789848449713.png */}
           <div className="relative flex aspect-4/3 min-h-[260px] w-full flex-col items-center justify-center rounded-2xl border border-[#D8CFBA] bg-[#E7E2D6] p-6 text-center text-[#292D38]">
             <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-[#F4EFEA]/80 text-[#596F57] shadow-xs">
               <Icon name="camera" size="1.75rem" />
             </div>
             <h3 className="text-base font-semibold text-[#292D38]">Camera preview</h3>
-            <p className="mt-1 text-sm text-[#71856A]">Patient signs here</p>
+            <p className="mt-1 text-sm text-[#71856A]">
+              {recognition.mode === 'words'
+                ? 'Patient signs here'
+                : 'Patient fingerspells letters (A–Z) here'}
+            </p>
           </div>
+
+          {recognition.mode === 'alphabet' ? fingerspellingAssembler : null}
 
           {modelUnavailable ? (
             <Callout tone="warning" icon="alert" title="Sign recognition is not available in this build">
@@ -369,6 +581,43 @@ export function CameraPanel({
 
   return (
     <div className={cn('space-y-3', className)}>
+      {/* Mode Switcher: Words vs Fingerspelling */}
+      <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-[#D8CFBA] bg-[#FAF6EE] p-2">
+        <div className="flex items-center gap-1.5">
+          <button
+            type="button"
+            onClick={() => recognition.setMode('words')}
+            className={cn(
+              'flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-semibold transition-all',
+              recognition.mode === 'words'
+                ? 'bg-[#596F57] text-white shadow-sm'
+                : 'text-[#596F57] hover:bg-[#EAE5D9]',
+            )}
+          >
+            <Icon name="message-square" size="14px" />
+            <span>Words & Signs (8)</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => recognition.setMode('alphabet')}
+            className={cn(
+              'flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-semibold transition-all',
+              recognition.mode === 'alphabet'
+                ? 'bg-[#596F57] text-white shadow-sm'
+                : 'text-[#596F57] hover:bg-[#EAE5D9]',
+            )}
+          >
+            <span className="font-mono text-xs font-bold">🔤</span>
+            <span>Fingerspelling (A–Z)</span>
+          </button>
+        </div>
+        <span className="text-[11px] font-medium text-muted px-1">
+          {recognition.mode === 'words'
+            ? 'Clinical words & wave greeting'
+            : 'Fingerspell names & custom sentences'}
+        </span>
+      </div>
+
       <div className="relative overflow-hidden rounded-2xl border border-line bg-black aspect-camera">
         <video
           ref={videoRef}
@@ -452,8 +701,27 @@ export function CameraPanel({
               </div>
             </div>
 
-            {/* Live Sign / Gesture / Guide pill. Displayed directly on video preview so signer has immediate feedback */}
-            {latestAccepted && handCount > 0 ? (
+            {/* Live Sign / Letter / Gesture / Guide pill. Displayed directly on video preview so signer has immediate feedback */}
+            {recognition.mode === 'alphabet' ? (
+              latestAccepted && handCount > 0 ? (
+                <p className="overlay-chip self-start inline-flex items-center gap-2 rounded-full bg-[#596F57] border border-white/20 px-[12px] py-[4px] text-[12px] font-bold leading-[16px] text-white shadow-md">
+                  <span>🔤 Letter:</span>
+                  <span className="font-mono text-base font-black text-white">{latestAccepted.label}</span>
+                  <span className="text-[11px] text-white/80">({Math.round(latestAccepted.probability * 100)}%)</span>
+                </p>
+              ) : activeCandidate && handCount > 0 ? (
+                <div className="overlay-chip self-start inline-flex items-center gap-2 rounded-full bg-black/75 border border-white/20 px-[12px] py-[4px] text-[12px] font-semibold leading-[16px] text-white shadow-md backdrop-blur-sm">
+                  <span className="h-2 w-2 rounded-full bg-primary animate-pulse" />
+                  <span>
+                    Letter: <strong className="font-mono text-sm">{activeCandidate.label}</strong> ({Math.round(activeCandidate.probability * 100)}%)
+                  </span>
+                </div>
+              ) : guideVisible || handCount === 0 ? (
+                <p className="overlay-chip self-start rounded-full px-[10px] py-[4px] text-[11px] font-medium leading-[15px] text-white">
+                  Hold hand in frame to spell letters (A–Z)
+                </p>
+              ) : null
+            ) : latestAccepted && handCount > 0 ? (
               <p className="overlay-chip self-start inline-flex items-center gap-1.5 rounded-full bg-[#596F57] border border-white/20 px-[12px] py-[4px] text-[12px] font-bold leading-[16px] text-white shadow-md">
                 <span>✅ Recognised:</span>
                 <span className="capitalize">{glossLabel(latestAccepted.label)}</span>
@@ -642,8 +910,10 @@ export function CameraPanel({
         </div>
       ) : null}
 
-      {/* Accepted chip, awaiting review. */}
-      {latestAccepted ? (
+      {/* Recognition feedback: Fingerspelling Assembler in alphabet mode, RecognitionChip in words mode */}
+      {recognition.mode === 'alphabet' ? (
+        fingerspellingAssembler
+      ) : latestAccepted ? (
         <RecognitionChip
           sign={latestAccepted}
           showNumericConfidence={showNumeric}

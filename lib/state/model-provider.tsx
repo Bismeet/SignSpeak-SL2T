@@ -26,10 +26,12 @@ import { checkModelVocabulary } from '@/lib/signs/vocabulary';
 import { useSettings } from '@/lib/state/settings';
 import type { ModelAvailability, ModelCard } from '@/lib/types';
 
+export type ModelType = 'words' | 'alphabet';
+
 interface ModelContextValue {
   availability: ModelAvailability;
-  /** Loads (once) and returns the classifier, or null when unavailable. */
-  ensureClassifier: () => Promise<SignClassifier | null>;
+  /** Loads (once) and returns the classifier, or null when unavailable. Defaults to 'words'. */
+  ensureClassifier: (type?: ModelType) => Promise<SignClassifier | null>;
   /** Non-blocking message, e.g. "the inference server was unreachable, using on-device". */
   notice: string | null;
   dismissNotice: () => void;
@@ -47,8 +49,11 @@ export function ModelProvider({ children }: { children: ReactNode }) {
   const [loadingClassifier, setLoadingClassifier] = useState(false);
   const [classifierError, setClassifierError] = useState<string | null>(null);
   const classifierRef = useRef<SignClassifier | null>(null);
+  const alphabetClassifierRef = useRef<SignClassifier | null>(null);
   const loadingPromiseRef = useRef<Promise<SignClassifier | null> | null>(null);
+  const alphabetLoadingPromiseRef = useRef<Promise<SignClassifier | null> | null>(null);
   const cardRef = useRef<ModelCard | null>(null);
+  const alphabetCardRef = useRef<ModelCard | null>(null);
   const useBackendRef = useRef(settings.useInferenceBackend);
 
   useBackendRef.current = settings.useInferenceBackend;
@@ -108,57 +113,104 @@ export function ModelProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  const ensureClassifier = useCallback(async (): Promise<SignClassifier | null> => {
-    if (classifierRef.current) return classifierRef.current;
-    if (loadingPromiseRef.current) return loadingPromiseRef.current;
+  const ensureClassifier = useCallback(
+    async (type: ModelType = 'words'): Promise<SignClassifier | null> => {
+      if (type === 'alphabet') {
+        if (alphabetClassifierRef.current) return alphabetClassifierRef.current;
+        if (alphabetLoadingPromiseRef.current) return alphabetLoadingPromiseRef.current;
 
-    const card = cardRef.current;
-    if (!card) return null;
+        const promise = (async () => {
+          try {
+            if (!alphabetCardRef.current) {
+              const cardResult = await loadModelCard(config.alphabetModelCardUrl);
+              if (!cardResult.ok) {
+                console.error('[SignSpeak] Failed to load alphabet model card:', cardResult.reason);
+                return null;
+              }
+              alphabetCardRef.current = cardResult.card;
+            }
 
-    setLoadingClassifier(true);
-    setClassifierError(null);
+            const result = await loadClassifier({
+              card: alphabetCardRef.current,
+              modelUrl: config.alphabetModelUrl,
+              preferBackend: false,
+            });
 
-    const promise = (async () => {
-      const result = await loadClassifier({
-        card,
-        preferBackend: useBackendRef.current,
-        onNotice: setNotice,
-      });
+            if (!result.ok) {
+              console.error('[SignSpeak] Failed to load alphabet classifier:', result.reason);
+              return null;
+            }
 
-      if (!result.ok) {
-        setClassifierError(result.reason);
-        setAvailability({
-          state: 'error',
-          reason: `The classifier could not start: ${result.reason}`,
-          remedy:
-            'Sign recognition is unavailable, but the phrase board, typing, speech and Emergency mode all work. Reload the page to try again.',
-        });
-        return null;
+            alphabetClassifierRef.current = result.classifier;
+            return result.classifier;
+          } catch (err) {
+            console.error('[SignSpeak] Alphabet model init error:', err);
+            return null;
+          }
+        })();
+
+        alphabetLoadingPromiseRef.current = promise;
+        try {
+          return await promise;
+        } finally {
+          alphabetLoadingPromiseRef.current = null;
+        }
       }
 
-      classifierRef.current = result.classifier;
-      setAvailability({
-        state: 'ready',
-        card: result.classifier.card,
-        runtime: result.classifier.runtime,
-      });
-      return result.classifier;
-    })();
+      if (classifierRef.current) return classifierRef.current;
+      if (loadingPromiseRef.current) return loadingPromiseRef.current;
 
-    loadingPromiseRef.current = promise;
-    try {
-      return await promise;
-    } finally {
-      setLoadingClassifier(false);
-      loadingPromiseRef.current = null;
-    }
-  }, []);
+      const card = cardRef.current;
+      if (!card) return null;
+
+      setLoadingClassifier(true);
+      setClassifierError(null);
+
+      const promise = (async () => {
+        const result = await loadClassifier({
+          card,
+          preferBackend: useBackendRef.current,
+          onNotice: setNotice,
+        });
+
+        if (!result.ok) {
+          setClassifierError(result.reason);
+          setAvailability({
+            state: 'error',
+            reason: `The classifier could not start: ${result.reason}`,
+            remedy:
+              'Sign recognition is unavailable, but the phrase board, typing, speech and Emergency mode all work. Reload the page to try again.',
+          });
+          return null;
+        }
+
+        classifierRef.current = result.classifier;
+        setAvailability({
+          state: 'ready',
+          card: result.classifier.card,
+          runtime: result.classifier.runtime,
+        });
+        return result.classifier;
+      })();
+
+      loadingPromiseRef.current = promise;
+      try {
+        return await promise;
+      } finally {
+        setLoadingClassifier(false);
+        loadingPromiseRef.current = null;
+      }
+    },
+    [],
+  );
 
   // Dispose the session when the page unloads so the WASM heap is released.
   useEffect(() => {
     return () => {
       classifierRef.current?.dispose();
       classifierRef.current = null;
+      alphabetClassifierRef.current?.dispose();
+      alphabetClassifierRef.current = null;
     };
   }, []);
 

@@ -21,6 +21,7 @@ export const SIGN_CATEGORIES: readonly SignCategory[] = [
   'people',
   'answers',
   'symptoms',
+  'alphabet',
 ];
 
 const VERIFICATION_STATUSES: readonly VerificationStatus[] = [

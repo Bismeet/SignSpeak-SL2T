@@ -34,6 +34,16 @@ export const config = {
   modelUrl: readString(process.env.NEXT_PUBLIC_MODEL_URL, '/models/sign-clf-v1.onnx'),
   /** Path to the model card written by `ml/scripts/train.py`. */
   modelCardUrl: readString(process.env.NEXT_PUBLIC_MODEL_CARD_URL, '/models/model-card.json'),
+  /** Path to the exported alphabet classifier. */
+  alphabetModelUrl: readString(
+    process.env.NEXT_PUBLIC_ALPHABET_MODEL_URL,
+    '/models/alphabet-clf-v1.onnx',
+  ),
+  /** Path to the alphabet model card. */
+  alphabetModelCardUrl: readString(
+    process.env.NEXT_PUBLIC_ALPHABET_MODEL_CARD_URL,
+    '/models/alphabet-model-card.json',
+  ),
   /** Self-hosted MediaPipe WASM directory. */
   mediapipeWasmPath: readString(process.env.NEXT_PUBLIC_MEDIAPIPE_WASM_PATH, '/mediapipe/wasm'),
   /** Self-hosted MediaPipe `.task` model files. */

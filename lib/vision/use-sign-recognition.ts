@@ -91,7 +91,11 @@ export interface RecognitionSnapshot {
   detectedGesture: DetectedGesture | null;
 }
 
+export type RecognitionMode = 'words' | 'alphabet';
+
 export interface UseSignRecognitionOptions {
+  /** Initial recognition mode ('words' or 'alphabet'). Defaults to 'words'. */
+  initialMode?: RecognitionMode;
   /** Called once per newly accepted, stable sign (never on repeat frames). */
   onAccepted?: (sign: AcceptedSign) => void;
   /** Called once per detected rule-based gesture (e.g. wave). */
@@ -99,6 +103,8 @@ export interface UseSignRecognitionOptions {
 }
 
 export interface UseSignRecognitionResult extends RecognitionSnapshot {
+  mode: RecognitionMode;
+  setMode: (mode: RecognitionMode) => void;
   videoRef: React.RefObject<HTMLVideoElement | null>;
   overlayCanvasRef: React.RefObject<HTMLCanvasElement | null>;
   start: () => Promise<void>;
@@ -217,6 +223,10 @@ export function useSignRecognition(
   const simulateOcclusionRef = useRef(false);
   simulateOcclusionRef.current = simulateOcclusion;
 
+  const [mode, setModeState] = useState<RecognitionMode>(options.initialMode ?? 'words');
+  const modeRef = useRef<RecognitionMode>(mode);
+  modeRef.current = mode;
+
   // Refs used by the animation loop; keeping them out of state avoids stale closures.
   const streamRef = useRef<MediaStream | null>(null);
   const landmarkerRef = useRef<SignLandmarker | null>(null);
@@ -282,6 +292,12 @@ export function useSignRecognition(
     if (!mountedRef.current) return;
     setSnapshot((previous) => ({ ...previous, ...patch }));
   }, []);
+
+  const setMode = useCallback((newMode: RecognitionMode) => {
+    setModeState(newMode);
+    decisionRef.current = createDecisionState();
+    publish({ current: null, rejectionHint: null, latestAccepted: null });
+  }, [publish]);
 
   // Mirror this hook's camera state into the shared context so the header pill matches what
   // is actually happening, and clear it on unmount so the header cannot keep claiming a
@@ -362,26 +378,32 @@ export function useSignRecognition(
       // landmark replay, which is fine — the overlay then uses the canvas' own pixel box.
       drawOverlay(frame, video);
 
-      const classifier = await ensureClassifier();
+      const currentMode = modeRef.current;
+      const classifier =
+        currentMode === 'words'
+          ? await ensureClassifier()
+          : await ensureClassifier('alphabet');
 
       if (!classifier) {
-        // Fallback to checking wave if classifier unavailable
-        const waveResult = waveDetectorRef.current?.update(frame);
-        if (waveResult?.detected) {
-          const gesture: DetectedGesture = {
-            type: 'wave',
-            label: 'Hello! 👋',
-            timestamp: waveResult.timestampMs,
-          };
-          publish({ detectedGesture: gesture });
-          onGestureRef.current?.(gesture);
+        // Fallback to checking wave if classifier unavailable and in words mode
+        if (currentMode === 'words') {
+          const waveResult = waveDetectorRef.current?.update(frame);
+          if (waveResult?.detected) {
+            const gesture: DetectedGesture = {
+              type: 'wave',
+              label: 'Hello! 👋',
+              timestamp: waveResult.timestampMs,
+            };
+            publish({ detectedGesture: gesture });
+            onGestureRef.current?.(gesture);
 
-          if (gestureTimeoutRef.current) {
-            clearTimeout(gestureTimeoutRef.current);
+            if (gestureTimeoutRef.current) {
+              clearTimeout(gestureTimeoutRef.current);
+            }
+            gestureTimeoutRef.current = setTimeout(() => {
+              publish({ detectedGesture: null });
+            }, 2500);
           }
-          gestureTimeoutRef.current = setTimeout(() => {
-            publish({ detectedGesture: null });
-          }, 2500);
         }
 
         setModelError('Sign recognition is not available on this device right now.');
@@ -396,6 +418,16 @@ export function useSignRecognition(
         return;
       }
 
+      const activeDecisionConfig: DecisionConfig = classifier.card.decision
+        ? {
+            confidenceThreshold: classifier.card.decision.confidenceThreshold,
+            marginThreshold: classifier.card.decision.marginThreshold,
+            minHandScore: classifier.card.decision.minHandScore,
+            windowSize: classifier.card.decision.smoothing.windowSize,
+            requiredVotes: classifier.card.decision.smoothing.requiredVotes,
+          }
+        : decisionConfigRef.current;
+
       if (frame.hands.length === 0) {
         // No hands in frame: do not run ML model on an empty frame
         const previousState = decisionRef.current;
@@ -406,7 +438,7 @@ export function useSignRecognition(
           vocabulary: classifier.card.vocabulary,
           handCount: 0,
           bestHandScore: 0,
-          config: decisionConfigRef.current,
+          config: activeDecisionConfig,
           negativeClass: classifier.card.negativeClass,
           landmarkCompleteness: 0,
           isIncompleteLandmarks: false,
@@ -434,40 +466,42 @@ export function useSignRecognition(
       }
       if (!mountedRef.current) return;
 
-      // Check if any non-negative ISL sign candidate is active or being signed
-      let maxSignProb = 0;
-      for (let i = 0; i < probabilities.length; i++) {
-        const vocabLabel = classifier.card.vocabulary[i];
-        if (vocabLabel && vocabLabel !== classifier.card.negativeClass && vocabLabel !== 'OTHER') {
-          const p = probabilities[i];
-          if (typeof p === 'number' && p > maxSignProb) {
-            maxSignProb = p;
+      if (currentMode === 'words') {
+        // Check if any non-negative ISL sign candidate is active or being signed
+        let maxSignProb = 0;
+        for (let i = 0; i < probabilities.length; i++) {
+          const vocabLabel = classifier.card.vocabulary[i];
+          if (vocabLabel && vocabLabel !== classifier.card.negativeClass && vocabLabel !== 'OTHER') {
+            const p = probabilities[i];
+            if (typeof p === 'number' && p > maxSignProb) {
+              maxSignProb = p;
+            }
           }
         }
-      }
 
-      const isSigningActive = maxSignProb >= 0.20 || decisionRef.current.latchedLabel !== null;
-      if (isSigningActive) {
-        // Suppress wave detector and clear accumulated reversals while signing an ISL word
-        waveDetectorRef.current?.resetReversals();
-      } else {
-        // Only evaluate wave gesture when hands are not performing an ISL vocabulary sign
-        const waveResult = waveDetectorRef.current?.update(frame);
-        if (waveResult?.detected) {
-          const gesture: DetectedGesture = {
-            type: 'wave',
-            label: 'Hello! 👋',
-            timestamp: waveResult.timestampMs,
-          };
-          publish({ detectedGesture: gesture });
-          onGestureRef.current?.(gesture);
+        const isSigningActive = maxSignProb >= 0.20 || decisionRef.current.latchedLabel !== null;
+        if (isSigningActive) {
+          // Suppress wave detector and clear accumulated reversals while signing an ISL word
+          waveDetectorRef.current?.resetReversals();
+        } else {
+          // Only evaluate wave gesture when hands are not performing an ISL vocabulary sign
+          const waveResult = waveDetectorRef.current?.update(frame);
+          if (waveResult?.detected) {
+            const gesture: DetectedGesture = {
+              type: 'wave',
+              label: 'Hello! 👋',
+              timestamp: waveResult.timestampMs,
+            };
+            publish({ detectedGesture: gesture });
+            onGestureRef.current?.(gesture);
 
-          if (gestureTimeoutRef.current) {
-            clearTimeout(gestureTimeoutRef.current);
+            if (gestureTimeoutRef.current) {
+              clearTimeout(gestureTimeoutRef.current);
+            }
+            gestureTimeoutRef.current = setTimeout(() => {
+              publish({ detectedGesture: null });
+            }, 2500);
           }
-          gestureTimeoutRef.current = setTimeout(() => {
-            publish({ detectedGesture: null });
-          }, 2500);
         }
       }
 
@@ -485,7 +519,7 @@ export function useSignRecognition(
         vocabulary: classifier.card.vocabulary,
         handCount: features.handCount,
         bestHandScore: features.bestHandScore,
-        config: decisionConfigRef.current,
+        config: activeDecisionConfig,
         negativeClass: classifier.card.negativeClass,
         landmarkCompleteness: completeness,
         isIncompleteLandmarks: isOccluded,
@@ -719,7 +753,7 @@ export function useSignRecognition(
 
     // 2. Then the classifier. A missing model is not fatal: the camera preview and the
     //    phrase board still work, and the UI says exactly why recognition is off.
-    const classifier = await ensureClassifier();
+    const classifier = await ensureClassifier(modeRef.current);
     if (!mountedRef.current || sessionId !== startSessionRef.current) {
       landmarker.close();
       landmarkerRef.current = null;
@@ -875,6 +909,8 @@ export function useSignRecognition(
 
   return {
     ...snapshot,
+    mode,
+    setMode,
     videoRef,
     overlayCanvasRef,
     start,

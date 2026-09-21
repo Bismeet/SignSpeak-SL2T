@@ -129,6 +129,28 @@ export default function TalkPage() {
     latestRecognitionIdRef.current = null;
   }, [dispatch]);
 
+  const handleSendFingerspelledSentence = useCallback(
+    (text: string) => {
+      const trimmed = text.trim();
+      if (!trimmed) return;
+      const id = createId('msg');
+      latestRecognitionIdRef.current = id;
+      dispatch({
+        type: 'add',
+        message: {
+          id,
+          party: 'deaf_user',
+          source: 'fingerspelling',
+          text: trimmed,
+        },
+      });
+      if (settings.autoSpeakRecognised) {
+        void speaker.speak(trimmed, { language: 'en-IN' });
+      }
+    },
+    [dispatch, settings.autoSpeakRecognised, speaker],
+  );
+
   const handlePatientSendText = useCallback(() => {
     if (!patientText.trim()) return;
     dispatch({
@@ -357,6 +379,7 @@ export default function TalkPage() {
               onCorrect={handleCorrectSign}
               onReject={handleRejectSign}
               onOpenPhraseBoard={() => setPhraseDrawerOpen(true)}
+              onSendFingerspelledSentence={handleSendFingerspelledSentence}
               layout="workspace"
             />
 
