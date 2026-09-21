@@ -29,6 +29,7 @@ import { config } from '@/lib/config';
 import { glossLabel } from '@/lib/signs/vocabulary';
 import type { AcceptedSign, UseSignRecognitionResult } from '@/lib/vision/use-sign-recognition';
 import { cn } from '@/lib/utils/cn';
+import { IslAlphabetGuideModal } from '@/components/camera/IslAlphabetGuideModal';
 
 /* ------------------------------------------------------------------------------------
  * Overlay chrome
@@ -111,6 +112,7 @@ export function CameraPanel({
   // Fingerspelling word assembler state
   const [spelledText, setSpelledText] = useState('');
   const [autoAddLetters, setAutoAddLetters] = useState(true);
+  const [isGuideOpen, setIsGuideOpen] = useState(false);
   const lastAcceptedLetterRef = useRef<string | null>(null);
 
   const {
@@ -312,7 +314,7 @@ export function CameraPanel({
                   : activeCandidate
                     ? `Candidate: ${activeCandidate.label}`
                     : active
-                      ? 'Sign any letter with one hand (A–Z)'
+                      ? 'Sign letters using ISL handshapes (A–Z)'
                       : 'Start camera to recognise letters from signing'}
               </span>
               {latestAccepted ? (
@@ -326,12 +328,20 @@ export function CameraPanel({
               ) : null}
             </div>
             <p className="text-xs text-[#71856A]">
-              ISL Single-Hand Alphabet · A through Z
+              Indian Sign Language (ISL) Standard Alphabet · Two-handed &amp; single-handed signs
             </p>
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <Button
+            size="sm"
+            variant="secondary"
+            icon="book-open"
+            onClick={() => setIsGuideOpen(true)}
+          >
+            ISL Sign Guide
+          </Button>
           <label className="flex items-center gap-1.5 text-xs text-[#596F57] font-medium cursor-pointer select-none">
             <input
               type="checkbox"
@@ -434,6 +444,8 @@ export function CameraPanel({
           </div>
         </div>
       </div>
+
+      <IslAlphabetGuideModal open={isGuideOpen} onClose={() => setIsGuideOpen(false)} />
     </div>
   );
 
