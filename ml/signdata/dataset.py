@@ -26,6 +26,7 @@ from .constants import (
     MIN_SIGNERS,
     MIN_STATIC_REPS_PER_CLASS,
     NEGATIVE_CLASS_GLOSS,
+    OFFSET_PRESENCE,
 )
 from .schema import CollectedSample
 
@@ -65,6 +66,52 @@ def _normalise_label(raw: str) -> str:
     return raw.strip().upper().replace(" ", "_")
 
 
+def apply_synthetic_occlusion(
+    x: np.ndarray,
+    *,
+    p: float = 0.25,
+    seed: int = 42,
+) -> np.ndarray:
+    """Simulate partial hand occlusion by randomly zeroing out distal finger joints.
+
+    Distal joint indices (DIP & TIP) for left hand (landmarks 3,4, 7,8, 11,12, 15,16, 19,20)
+    and right hand (landmarks 24,25, 28,29, 32,33, 36,37, 40,41 in hand indices, offset by 63).
+    Also corrupts fingertip distances (138..147) and extension angles (148..157).
+    Leaves palm normal (132..137), wrist/knuckles, and hand centroid (128..131) intact.
+    """
+    if x.shape[0] == 0:
+        return x.copy()
+
+    rng = np.random.RandomState(seed)
+    augmented = x.copy()
+
+    mask = rng.uniform(0, 1, size=augmented.shape[0]) < p
+    indices = np.where(mask)[0]
+
+    for idx in indices:
+        fingers_to_drop = rng.choice(5, size=rng.randint(1, 4), replace=False)
+        for f in fingers_to_drop:
+            # Left hand (if present: feat[126] > 0)
+            if augmented[idx, 126] > 0:
+                tip_idx = (f * 4 + 4) * 3
+                dip_idx = (f * 4 + 3) * 3
+                augmented[idx, tip_idx : tip_idx + 3] = 0.0
+                augmented[idx, dip_idx : dip_idx + 3] = 0.0
+                augmented[idx, 138 + f] = 0.0
+                augmented[idx, 148 + f] = 0.0
+
+            # Right hand (if present: feat[127] > 0)
+            if augmented[idx, 127] > 0:
+                tip_idx = 63 + (f * 4 + 4) * 3
+                dip_idx = 63 + (f * 4 + 3) * 3
+                augmented[idx, tip_idx : tip_idx + 3] = 0.0
+                augmented[idx, dip_idx : dip_idx + 3] = 0.0
+                augmented[idx, 138 + 5 + f] = 0.0
+                augmented[idx, 148 + 5 + f] = 0.0
+
+    return augmented
+
+
 def build_bundle(
     samples: Sequence[CollectedSample],
     *,
@@ -97,7 +144,20 @@ def build_bundle(
     seen_sample_ids: set[str] = set()
 
     for sample in samples:
-        label = _normalise_label(sample.label)
+        # Determine label: check if the clip's prefix from sample.id corresponds to a target word
+        raw_id = sample.id or ""
+        raw_prefix = (raw_id.split("/")[0] if "/" in raw_id else raw_id.split("__")[0]).strip().lower()
+        norm_prefix = _normalise_label(raw_prefix)
+        norm_sample_label = _normalise_label(sample.label)
+
+        if allowed is not None and norm_prefix in allowed:
+            label = norm_prefix
+        elif allowed is not None and norm_sample_label in allowed:
+            label = norm_sample_label
+        elif norm_sample_label in negative_labels:
+            label = norm_sample_label
+        else:
+            label = NEGATIVE_CLASS_GLOSS
 
         if sample.signer_type == "learner" and not include_learners:
             warnings.append(
@@ -106,7 +166,7 @@ def build_bundle(
             )
             continue
 
-        if allowed is not None and label not in allowed:
+        if allowed is not None and label not in allowed and label not in negative_labels:
             warnings.append(
                 f"sample {sample.id}: label '{label}' is not in data/sign-vocabulary.json; skipped."
             )
@@ -122,15 +182,20 @@ def build_bundle(
             warnings.append(f"sample {sample.id}: no feature frames; skipped.")
             continue
 
+        valid_rows: list[np.ndarray] = []
         for row in sample.features:
             if len(row) != FEATURE_VECTOR_LENGTH:
                 continue
-            rows.append(np.asarray(row, dtype=np.float32))
+            # Filter empty frames where no hands are detected
+            if row[OFFSET_PRESENCE] <= 0 and row[OFFSET_PRESENCE + 1] <= 0:
+                continue
+            valid_rows.append(np.asarray(row, dtype=np.float32))
 
-        accepted = len(sample.features)
+        accepted = len(valid_rows)
         if accepted == 0:
             continue
 
+        rows.extend(valid_rows)
         labels.extend([label] * accepted)
         groups.extend([sample.signer_id] * accepted)
         sample_ids.extend([sample.id or f"{sample.signer_id}:{label}"] * accepted)

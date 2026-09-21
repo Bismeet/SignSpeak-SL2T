@@ -75,6 +75,58 @@
       "notes": ""
     },
     {
+      "gloss": "FOOD",
+      "label": "Food",
+      "labelHi": "खाना",
+      "category": "needs",
+      "tier": "must",
+      "motion": "unverified",
+      "verification": "unverified",
+      "verifiedBy": "",
+      "verifiedOn": "",
+      "reference": "",
+      "notes": "Core sign for patient nutrition and dietary requests."
+    },
+    {
+      "gloss": "HOSPITAL",
+      "label": "Hospital",
+      "labelHi": "अस्पताल",
+      "category": "help",
+      "tier": "must",
+      "motion": "unverified",
+      "verification": "unverified",
+      "verifiedBy": "",
+      "verifiedOn": "",
+      "reference": "",
+      "notes": "Core medical setting sign."
+    },
+    {
+      "gloss": "PLEASE",
+      "label": "Please",
+      "labelHi": "कृपया",
+      "category": "help",
+      "tier": "must",
+      "motion": "unverified",
+      "verification": "unverified",
+      "verifiedBy": "",
+      "verifiedOn": "",
+      "reference": "",
+      "notes": "Clinical polite request modifier."
+    },
+    {
+      "gloss": "THANK_YOU",
+      "label": "Thank you",
+      "labelHi": "धन्यवाद",
+      "category": "answers",
+      "tier": "must",
+      "motion": "unverified",
+      "verification": "unverified",
+      "verifiedBy": "",
+      "verifiedOn": "",
+      "reference": "",
+      "notes": "Patient greeting and acknowledgment sign."
+    },
+    {
       "gloss": "TOILET",
       "label": "Toilet",
       "labelHi": "शौचालय",
@@ -216,6 +268,58 @@
       "verifiedOn": "",
       "reference": "",
       "notes": "May be a two-part sign (PHONE + FAMILY) rather than a single sign; needs expert input."
+    },
+    {
+      "gloss": "HELLO",
+      "label": "Hello",
+      "labelHi": "नमस्ते",
+      "category": "help",
+      "tier": "must",
+      "motion": "unverified",
+      "verification": "unverified",
+      "verifiedBy": "",
+      "verifiedOn": "",
+      "reference": "",
+      "notes": "Everyday greeting sign."
+    },
+    {
+      "gloss": "DRINK",
+      "label": "Drink",
+      "labelHi": "पीना",
+      "category": "needs",
+      "tier": "must",
+      "motion": "unverified",
+      "verification": "unverified",
+      "verifiedBy": "",
+      "verifiedOn": "",
+      "reference": "",
+      "notes": "Essential patient hydration request."
+    },
+    {
+      "gloss": "HOSPITAL",
+      "label": "Hospital",
+      "labelHi": "अस्पताल",
+      "category": "help",
+      "tier": "must",
+      "motion": "unverified",
+      "verification": "unverified",
+      "verifiedBy": "",
+      "verifiedOn": "",
+      "reference": "",
+      "notes": "Medical facility assistance request."
+    },
+    {
+      "gloss": "THANK_YOU",
+      "label": "Thank you",
+      "labelHi": "धन्यवाद",
+      "category": "answers",
+      "tier": "must",
+      "motion": "unverified",
+      "verification": "unverified",
+      "verifiedBy": "",
+      "verifiedOn": "",
+      "reference": "",
+      "notes": "Polite expression of gratitude."
     }
   ]
 }

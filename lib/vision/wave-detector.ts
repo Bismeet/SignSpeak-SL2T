@@ -40,10 +40,10 @@ export const DEFAULT_WAVE_CONFIG: WaveDetectorConfig = {
   minHandScore: 0.5,
   minOpenFingers: 3,
   minExtensionRatio: 1.1,
-  minStrokeDeltaX: 0.04,
+  minStrokeDeltaX: 0.06,
   minOscillations: 3,
   windowMs: 1200,
-  cooldownMs: 2000,
+  cooldownMs: 3000,
   maxFrameGapMs: 500,
   requireUpright: true,
 };
@@ -180,6 +180,19 @@ export class WaveDetector {
     this.handStates.Left = createSingleHandState();
     this.handStates.Right = createSingleHandState();
     this.lastTriggerMs = 0;
+  }
+
+  /**
+   * Clears accumulated directional reversals and stroke tracking without clearing cooldown.
+   * Suppresses accidental wave triggers when another sign gesture is active.
+   */
+  public resetReversals(): void {
+    this.handStates.Left.reversals = [];
+    this.handStates.Left.currentDirection = 0;
+    this.handStates.Left.lastPalmX = null;
+    this.handStates.Right.reversals = [];
+    this.handStates.Right.currentDirection = 0;
+    this.handStates.Right.lastPalmX = null;
   }
 
   /**

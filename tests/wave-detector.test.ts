@@ -279,4 +279,32 @@ describe('WaveDetector - Detection Requirements', () => {
     // Now a 2nd trigger is accepted
     expect(triggerCount).toBe(2);
   });
+
+  it('Scenario 8: resetReversals() clears pending oscillations to prevent hijacking during signing', () => {
+    const detector = new WaveDetector();
+
+    // Partial wave (2 strokes: right then left)
+    const partialWave = [0.40, 0.45, 0.50, 0.44, 0.38];
+    let t = 1000;
+    partialWave.forEach((x) => {
+      t += 50;
+      detector.update(createFrame(createSyntheticHand({ palmX: x, isOpen: true }), t));
+    });
+
+    // An ISL sign is detected -> caller resets reversals
+    detector.resetReversals();
+
+    // Now a single additional stroke occurs (would have triggered 3rd reversal if not reset)
+    const extraStroke = [0.44, 0.49, 0.53];
+    let triggered = false;
+    extraStroke.forEach((x) => {
+      t += 50;
+      const res = detector.update(createFrame(createSyntheticHand({ palmX: x, isOpen: true }), t));
+      if (res.detected) triggered = true;
+    });
+
+    // Must NOT trigger wave because reversals were cleared
+    expect(triggered).toBe(false);
+  });
 });
+

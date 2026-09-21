@@ -54,9 +54,17 @@ DEFAULT_OUT = REPO_ROOT / "ml" / "data" / "isl-subset"
 DATASET_ID = "vidit031/isl-isolated-40words"
 METADATA_FILENAME = "metadata.csv"
 
-#: The vocabulary this model is trained on. `food` and `hospital` were removed because
-#: they are not in `data/sign-vocabulary.json`. `stop` was removed due to lack of clips.
-TARGET_WORDS: tuple[str, ...] = ("help", "water", "yes", "no")
+#: The vocabulary this model is trained on.
+TARGET_WORDS: tuple[str, ...] = (
+    "help",
+    "water",
+    "food",
+    "hospital",
+    "please",
+    "thank you",
+    "yes",
+    "no",
+)
 
 #: Recorded for the model card so the exclusion is visible, not silently missing.
 EXCLUDED_WORDS: dict[str, str] = {
@@ -64,15 +72,6 @@ EXCLUDED_WORDS: dict[str, str] = {
         "Excluded: 4 clips total, 1 flagged 'Needs Manual Review', leaving 3 usable clips "
         "from 2 sources with no signer identity (CISLR hash, ISLRTC dictionary). Too few to "
         "train, and the source is dictionary-style rather than in-the-wild signing."
-    ),
-    "food": (
-        "Excluded: the dataset has 17 'food' clips, but FOOD is not a gloss in "
-        "data/sign-vocabulary.json. A model predicting it is rejected by the browser as "
-        "incompatible, because the app has no label or phrase for the word."
-    ),
-    "hospital": (
-        "Excluded: the dataset has 21 'hospital' clips (all from INCLUDE), but HOSPITAL is "
-        "not a published gloss. Same incompatibility as FOOD."
     ),
 }
 
@@ -236,11 +235,13 @@ def download_clips(
     needs no cache locking. It is also faster here: ~1.8 s per clip, and the pool makes the
     whole set about a minute.
     """
+    import ssl  # noqa: PLC0415
     import urllib.parse  # noqa: PLC0415
     import urllib.request  # noqa: PLC0415
     from concurrent.futures import ThreadPoolExecutor, as_completed  # noqa: PLC0415
 
     base = f"https://huggingface.co/datasets/{DATASET_ID}/resolve/main"
+    ssl_ctx = ssl._create_unverified_context()
 
     def fetch(record: dict[str, object]) -> tuple[dict[str, object], str | None]:
         remote = str(record["video_path"])
@@ -251,7 +252,7 @@ def download_clips(
         target.parent.mkdir(parents=True, exist_ok=True)
         try:
             request = urllib.request.Request(url, headers={"User-Agent": "SignSpeak/1.0"})
-            with urllib.request.urlopen(request, timeout=180) as response:  # noqa: S310
+            with urllib.request.urlopen(request, timeout=180, context=ssl_ctx) as response:  # noqa: S310
                 payload = response.read()
             if not payload:
                 raise ValueError("empty response body")

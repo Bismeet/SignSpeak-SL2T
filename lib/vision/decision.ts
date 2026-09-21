@@ -142,9 +142,6 @@ function countVotes(window: Array<string | null>, label: string): number {
 export function decide(input: DecisionInput): DecisionResult {
   const { state, probabilities, vocabulary, handCount, bestHandScore, config, negativeClass } = input;
 
-  const ranked = rank(probabilities, vocabulary);
-  const top3 = ranked.slice(0, 3);
-
   // 1. No hands at all -> nothing to classify.
   if (handCount === 0) {
     return {
@@ -152,11 +149,14 @@ export function decide(input: DecisionInput): DecisionResult {
         ...pushVerdict(state, null, config.windowSize),
         consecutiveRejections: state.consecutiveRejections + 1,
       },
-      prediction: rejection('no_hands', top3),
+      prediction: rejection('no_hands', []),
       emitted: false,
       suggestPhraseBoard: false,
     };
   }
+
+  const ranked = rank(probabilities, vocabulary);
+  const top3 = ranked.slice(0, 3);
 
   // 2. Incomplete landmark input / occlusion detected -> fail-safe withholding.
   if (

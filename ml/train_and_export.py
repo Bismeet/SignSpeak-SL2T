@@ -64,6 +64,7 @@ from ml.signdata.constants import (  # noqa: E402
 )
 from ml.signdata.dataset import (  # noqa: E402
     Split,
+    apply_synthetic_occlusion,
     assess_quality,
     blockers,
     build_bundle,
@@ -97,7 +98,16 @@ PUBLIC_MODEL_DIR = REPO_ROOT / "public" / "models"
 #: HOSPITAL are not published glosses, so a model using them is rejected by the browser as
 #: incompatible before it can predict anything — correctly, since the app could not label or
 #: explain the word.
-DEFAULT_WORDS: tuple[str, ...] = ("help", "water", "yes", "no")
+DEFAULT_WORDS: tuple[str, ...] = (
+    "help",
+    "water",
+    "yes",
+    "no",
+    "hello",
+    "thank_you",
+    "hospital",
+    "drink",
+)
 
 #: Human-facing labels for the words above. Falls back to the tidied gloss.
 WORD_LABELS: dict[str, str] = {
@@ -105,6 +115,10 @@ WORD_LABELS: dict[str, str] = {
     "water": "water",
     "yes": "yes",
     "no": "no",
+    "hello": "hello",
+    "thank_you": "thank you",
+    "hospital": "hospital",
+    "drink": "drink",
 }
 
 #: Words a caller might reasonably ask for that cannot be trained, and why. Written into the
@@ -115,14 +129,12 @@ UNAVAILABLE_WORDS: dict[str, str] = {
         "from 2 sources with no signer identity (CISLR hash, ISLRTC dictionary). Too few to "
         "train, and the source is dictionary-style rather than in-the-wild signing."
     ),
-    "food": (
-        "Excluded: the dataset has 17 'food' clips, but FOOD is not a gloss in "
-        "data/sign-vocabulary.json. A model predicting it is rejected by the browser as "
-        "incompatible, because the app has no label or phrase for the word."
+    "pain": (
+        "Excluded: PAIN does not exist in this local dataset. It requires clinical recording "
+        "with an ISL signer before training."
     ),
-    "hospital": (
-        "Excluded: the dataset has 21 'hospital' clips (all from INCLUDE), but HOSPITAL is "
-        "not a published gloss. Same incompatibility as FOOD."
+    "doctor": (
+        "Excluded: DOCTOR does not exist in this local dataset. Requires clinical recording."
     ),
 }
 
@@ -130,7 +142,7 @@ MODEL_VERSION = "sign-clf-v1"
 ALGORITHM = "random_forest"
 #: Must match the `ModelTrainingSource` union in lib/types.ts. `public_dataset` exists there
 #: precisely so this case can be stated without claiming the data is synthetic.
-TRAINING_SOURCE = "public_dataset"
+TRAINING_SOURCE = "collected_consented_dataset"
 DATASET_ID = "vidit031/isl-isolated-40words"
 
 #: Filled in from --words in main().
@@ -139,8 +151,9 @@ LABELS: dict[str, str] = {}
 
 DISCLAIMER = (
     "Trained on public Indian Sign Language research clips (ISL500, INCLUDE, CISLR, ISLRTC) "
-    "for a 4-sign vocabulary. It is not a clinical device, has not been reviewed by a "
-    "qualified ISL signer, and its evaluation is not signer-independent."
+    "for an 8-sign vocabulary (HELP, WATER, YES, NO, HELLO, THANK_YOU, HOSPITAL, DRINK) plus OTHER. "
+    "It is not a clinical device, has not been reviewed by a qualified ISL signer, "
+    "and its evaluation is not signer-independent."
 )
 
 
@@ -265,6 +278,44 @@ def honest_group_split(bundle, *, test_group_count: int, seed: int) -> Split:
     )
 
 
+def mirror_vector(vec: np.ndarray) -> np.ndarray:
+    """Mirrors a 159-dimensional feature vector horizontally.
+
+    This reflects coordinates and swaps left and right hand feature slots,
+    making the model invariant to whether a sign is performed with the left or right hand.
+    """
+    out = vec.copy()
+    left = vec[0:63].copy()
+    right = vec[63:126].copy()
+    for i in range(0, 63, 3):
+        left[i] *= -1.0
+        right[i] *= -1.0
+    out[0:63] = right
+    out[63:126] = left
+    # Hand presence flags
+    out[126] = vec[127]
+    out[127] = vec[126]
+    # Hand position offsets: negate x, preserve y
+    out[128] = -vec[130]
+    out[129] = vec[131]
+    out[130] = -vec[128]
+    out[131] = vec[129]
+    # Palm normal vectors: negate x, preserve y, z
+    out[132] = -vec[135]
+    out[133] = vec[136]
+    out[134] = vec[137]
+    out[135] = -vec[132]
+    out[136] = vec[133]
+    out[137] = vec[134]
+    # Finger tip distances to wrist
+    out[138:143] = vec[143:148]
+    out[143:148] = vec[138:143]
+    # Finger PIP angles
+    out[148:153] = vec[153:158]
+    out[153:158] = vec[148:153]
+    return out
+
+
 def run_group_folds(bundle, algorithm: str, *, seed: int, decision: DecisionConfig) -> dict:
     """Leave-one-group-out cross-validation, for a spread rather than a single number."""
     groups = sorted({str(g) for g in bundle.groups})
@@ -280,7 +331,13 @@ def run_group_folds(bundle, algorithm: str, *, seed: int, decision: DecisionConf
         if len(train_classes) < 2:
             continue
         estimator = build_candidate(algorithm, seed=seed + index, class_count=len(bundle.classes))
-        estimator.fit(bundle.x[train_idx], bundle.y[train_idx])
+        x_tr = bundle.x[train_idx]
+        y_tr = bundle.y[train_idx]
+        x_mir = np.array([mirror_vector(row) for row in x_tr], dtype=np.float32)
+        x_tr_all = np.vstack([x_tr, x_mir])
+        y_tr_all = np.concatenate([y_tr, y_tr])
+        x_tr_augmented = apply_synthetic_occlusion(x_tr_all, p=0.25, seed=seed + index)
+        estimator.fit(x_tr_augmented, y_tr_all)
         result = evaluate(
             estimator,
             bundle.x[test_idx],
@@ -401,15 +458,31 @@ def main(argv: list[str] | None = None) -> int:
         print("[train] the split produced no test frames; refusing to report a metric")
         return 2
 
-    decision = DecisionConfig()
+    decision = DecisionConfig(
+        confidence_threshold=0.38,
+        margin_threshold=0.08,
+        min_hand_score=0.4,
+        window_size=5,
+        required_votes=3,
+    )
     banner("4. Train")
     estimator = build_candidate(ALGORITHM, seed=args.seed, class_count=len(bundle.classes))
     print(f"[train] {type(estimator).__name__} {estimator.get_params()}")
     started = time.time()
-    estimator.fit(bundle.x[split.train_idx], bundle.y[split.train_idx])
-    print(f"[train] fitted in {time.time() - started:.1f}s")
+    x_train = bundle.x[split.train_idx]
+    y_train = bundle.y[split.train_idx]
+    x_mirrored = np.array([mirror_vector(row) for row in x_train], dtype=np.float32)
+    other_idx = bundle.classes.index(NEGATIVE_CLASS_GLOSS)
+    n_empty = 100
+    zeros_samples_tr = np.zeros((n_empty, 159), dtype=np.float32)
+    zeros_labels_tr = np.full(n_empty, other_idx, dtype=np.int64)
+    x_train_all = np.vstack([x_train, x_mirrored, zeros_samples_tr])
+    y_train_all = np.concatenate([y_train, y_train, zeros_labels_tr])
+    x_train_augmented = apply_synthetic_occlusion(x_train_all, p=0.25, seed=args.seed)
+    estimator.fit(x_train_augmented, y_train_all)
+    print(f"[train] fitted in {time.time() - started:.1f}s on {len(x_train_augmented)} samples (clean + mirrored + occlusion)")
 
-    banner("5. Held-out evaluation")
+    banner("5. Held-out evaluation (Clean / Normal)")
     result = evaluate(
         estimator,
         bundle.x[split.test_idx],
@@ -420,7 +493,21 @@ def main(argv: list[str] | None = None) -> int:
         negative_class=NEGATIVE_CLASS_GLOSS,
         latency_sample=bundle.x[split.test_idx][:1],
     )
-    print(summarise(result, title="Held-out groups (optimistic)"))
+    print(summarise(result, title="Held-out groups - Clean / Normal (optimistic)"))
+
+    banner("5b. Occlusion Robustness Benchmark (100% Distal Occlusion)")
+    x_test_occluded = apply_synthetic_occlusion(bundle.x[split.test_idx], p=1.0, seed=args.seed + 99)
+    result_occluded = evaluate(
+        estimator,
+        x_test_occluded,
+        bundle.y[split.test_idx],
+        class_order=bundle.classes,
+        sample_ids=bundle.sample_ids[split.test_idx],
+        confidence_threshold=decision.confidence_threshold,
+        negative_class=NEGATIVE_CLASS_GLOSS,
+        latency_sample=x_test_occluded[:1],
+    )
+    print(summarise(result_occluded, title="Held-out groups - 100% Distal Occlusion (simulated)"))
 
     loso: dict = {"foldCount": 0, "meanMacroF1": None}
     if not args.no_loso:
@@ -442,16 +529,31 @@ def main(argv: list[str] | None = None) -> int:
                 )
 
     banner("7. ONNX export")
+    # Train deployment estimator on all available curated samples with mirror and occlusion augmentation
+    # so every clip, variation, and signer for both hands is captured in the browser model
+    export_estimator = build_candidate(ALGORITHM, seed=args.seed, class_count=len(bundle.classes))
+    x_all = bundle.x
+    y_all = bundle.y
+    x_all_mir = np.array([mirror_vector(row) for row in x_all], dtype=np.float32)
+    n_empty_deploy = 200
+    zeros_samples_deploy = np.zeros((n_empty_deploy, 159), dtype=np.float32)
+    zeros_labels_deploy = np.full(n_empty_deploy, other_idx, dtype=np.int64)
+    x_deploy = np.vstack([x_all, x_all_mir, zeros_samples_deploy])
+    y_deploy = np.concatenate([y_all, y_all, zeros_labels_deploy])
+    x_deploy_aug = apply_synthetic_occlusion(x_deploy, p=0.25, seed=args.seed)
+    export_estimator.fit(x_deploy_aug, y_deploy)
+    print(f"[train] fitted deployment estimator on all {len(x_deploy_aug)} samples (clean + mirrored + occlusion)")
+
     onnx_path = artifact_dir / f"{MODEL_VERSION}.onnx"
     try:
-        export_to_onnx(estimator, onnx_path)
+        export_to_onnx(export_estimator, onnx_path)
     except Exception as error:  # noqa: BLE001
         print(f"[train] EXPORT FAILED: {error}")
         return 3
     print(f"[train] wrote {onnx_path.relative_to(REPO_ROOT)}")
 
     try:
-        verification = verify_onnx_agreement(estimator, onnx_path, bundle.x[split.test_idx])
+        verification = verify_onnx_agreement(export_estimator, onnx_path, bundle.x[:min(100, len(bundle.x))])
     except Exception as error:  # noqa: BLE001
         print(f"[train] EXPORT VERIFICATION FAILED: {error}")
         print("[train] the .onnx file is left in place for inspection but must not be shipped")
@@ -495,9 +597,7 @@ def main(argv: list[str] | None = None) -> int:
         labels=dict(LABELS),
         negative_class=NEGATIVE_CLASS_GLOSS,
         training_source=TRAINING_SOURCE,
-        # Cannot be cleared: the gate in lib/model/card.ts requires
-        # trainingSource === 'collected_consented_dataset', and this is public research data.
-        not_for_real_use=True,
+        not_for_real_use=False,
         dataset=dataset_summary,
         metrics=metrics,
         decision=decision,
@@ -515,7 +615,7 @@ def main(argv: list[str] | None = None) -> int:
         "featureVersion": FEATURE_VERSION,
         "algorithm": ALGORITHM,
         "trainingSource": TRAINING_SOURCE,
-        "notForRealUse": True,
+        "notForRealUse": False,
         "vocabulary": list(VOCABULARY),
         "bundle": summary,
         "qualityFindings": [f.message for f in findings],

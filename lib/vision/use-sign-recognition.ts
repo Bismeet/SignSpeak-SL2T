@@ -234,10 +234,22 @@ export function useSignRecognition(
   const mountedRef = useRef(true);
   const startSessionRef = useRef(0);
 
-  const decisionConfig: DecisionConfig = useMemo(
-    () => (settings.confidenceMode === 'strict' ? STRICT_DECISION_CONFIG : DEFAULT_DECISION_CONFIG),
-    [settings.confidenceMode],
-  );
+  const decisionConfig: DecisionConfig = useMemo(() => {
+    if (settings.confidenceMode === 'strict') {
+      return STRICT_DECISION_CONFIG;
+    }
+    if (availability.state === 'ready' && availability.card?.decision) {
+      const d = availability.card.decision;
+      return {
+        confidenceThreshold: d.confidenceThreshold,
+        marginThreshold: d.marginThreshold,
+        minHandScore: d.minHandScore,
+        windowSize: d.smoothing.windowSize,
+        requiredVotes: d.smoothing.requiredVotes,
+      };
+    }
+    return DEFAULT_DECISION_CONFIG;
+  }, [settings.confidenceMode, availability]);
   const decisionConfigRef = useRef(decisionConfig);
   decisionConfigRef.current = decisionConfig;
 
@@ -350,28 +362,28 @@ export function useSignRecognition(
       // landmark replay, which is fine — the overlay then uses the canvas' own pixel box.
       drawOverlay(frame, video);
 
-      // Check rule-based wave gesture (e.g. "Hello! 👋")
-      const waveResult = waveDetectorRef.current?.update(frame);
-      if (waveResult?.detected) {
-        const gesture: DetectedGesture = {
-          type: 'wave',
-          label: 'Hello! 👋',
-          timestamp: waveResult.timestampMs,
-        };
-        publish({ detectedGesture: gesture });
-        onGestureRef.current?.(gesture);
-
-        if (gestureTimeoutRef.current) {
-          clearTimeout(gestureTimeoutRef.current);
-        }
-        gestureTimeoutRef.current = setTimeout(() => {
-          publish({ detectedGesture: null });
-        }, 2500);
-      }
-
       const classifier = await ensureClassifier();
 
       if (!classifier) {
+        // Fallback to checking wave if classifier unavailable
+        const waveResult = waveDetectorRef.current?.update(frame);
+        if (waveResult?.detected) {
+          const gesture: DetectedGesture = {
+            type: 'wave',
+            label: 'Hello! 👋',
+            timestamp: waveResult.timestampMs,
+          };
+          publish({ detectedGesture: gesture });
+          onGestureRef.current?.(gesture);
+
+          if (gestureTimeoutRef.current) {
+            clearTimeout(gestureTimeoutRef.current);
+          }
+          gestureTimeoutRef.current = setTimeout(() => {
+            publish({ detectedGesture: null });
+          }, 2500);
+        }
+
         setModelError('Sign recognition is not available on this device right now.');
         publish({
           current: null,
@@ -379,6 +391,33 @@ export function useSignRecognition(
           tracking: frame.hands.length > 0 ? 'tracking' : 'no-hands',
           handCount: frame.hands.length,
           landmarkCompleteness: frame.hands.length > 0 ? 1 : 0,
+          isOccluded: false,
+        });
+        return;
+      }
+
+      if (frame.hands.length === 0) {
+        // No hands in frame: do not run ML model on an empty frame
+        const previousState = decisionRef.current;
+        const releasedState = releaseLatchIfReleased(previousState, 0);
+        const result = decide({
+          state: releasedState,
+          probabilities: [],
+          vocabulary: classifier.card.vocabulary,
+          handCount: 0,
+          bestHandScore: 0,
+          config: decisionConfigRef.current,
+          negativeClass: classifier.card.negativeClass,
+          landmarkCompleteness: 0,
+          isIncompleteLandmarks: false,
+        });
+        decisionRef.current = result.state;
+        publish({
+          current: result.prediction,
+          rejectionHint: REJECTION_HINT.no_hands,
+          tracking: 'no-hands',
+          handCount: 0,
+          landmarkCompleteness: 0,
           isOccluded: false,
         });
         return;
@@ -394,6 +433,43 @@ export function useSignRecognition(
         return;
       }
       if (!mountedRef.current) return;
+
+      // Check if any non-negative ISL sign candidate is active or being signed
+      let maxSignProb = 0;
+      for (let i = 0; i < probabilities.length; i++) {
+        const vocabLabel = classifier.card.vocabulary[i];
+        if (vocabLabel && vocabLabel !== classifier.card.negativeClass && vocabLabel !== 'OTHER') {
+          const p = probabilities[i];
+          if (typeof p === 'number' && p > maxSignProb) {
+            maxSignProb = p;
+          }
+        }
+      }
+
+      const isSigningActive = maxSignProb >= 0.20 || decisionRef.current.latchedLabel !== null;
+      if (isSigningActive) {
+        // Suppress wave detector and clear accumulated reversals while signing an ISL word
+        waveDetectorRef.current?.resetReversals();
+      } else {
+        // Only evaluate wave gesture when hands are not performing an ISL vocabulary sign
+        const waveResult = waveDetectorRef.current?.update(frame);
+        if (waveResult?.detected) {
+          const gesture: DetectedGesture = {
+            type: 'wave',
+            label: 'Hello! 👋',
+            timestamp: waveResult.timestampMs,
+          };
+          publish({ detectedGesture: gesture });
+          onGestureRef.current?.(gesture);
+
+          if (gestureTimeoutRef.current) {
+            clearTimeout(gestureTimeoutRef.current);
+          }
+          gestureTimeoutRef.current = setTimeout(() => {
+            publish({ detectedGesture: null });
+          }, 2500);
+        }
+      }
 
       const previousState = decisionRef.current;
       const releasedState = releaseLatchIfReleased(previousState, features.handCount);
@@ -432,7 +508,9 @@ export function useSignRecognition(
 
       // In demo mode (model not trained for real use), prevent emitting fabricated ISL
       // predictions into the patient conversation. Keep feature extraction live.
-      const isDemoModel = Boolean(classifier.card.notForRealUse);
+      const isDemoModel = Boolean(
+        classifier.card.notForRealUse && classifier.card.trainingSource === 'none',
+      );
 
       if (!isDemoModel && result.emitted && result.prediction.accepted) {
         const alternatives: MessageAlternative[] = result.prediction.top3
@@ -610,6 +688,7 @@ export function useSignRecognition(
     let landmarker: SignLandmarker;
     try {
       landmarker = await SignLandmarker.create({
+        swapHandedness: false,
         assets: {
           wasmBasePath: config.mediapipeWasmPath,
           handModelPath: config.handModelUrl,

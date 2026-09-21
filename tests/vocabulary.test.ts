@@ -50,9 +50,9 @@ describe('checkModelVocabulary', () => {
   });
 
   it('rejects a model that predicts a gloss the app cannot label', () => {
-    const result = checkModelVocabulary(['HELP', 'HOSPITAL']);
+    const result = checkModelVocabulary(['HELP', 'UNPUBLISHED_GLOSS']);
     expect(result.ok).toBe(false);
-    expect(result.unknown).toEqual(['HOSPITAL']);
+    expect(result.unknown).toEqual(['UNPUBLISHED_GLOSS']);
     expect(result.known).toEqual(['HELP']);
   });
 
@@ -67,9 +67,9 @@ describe('checkModelVocabulary', () => {
 
   it('still rejects an unpublished class when a negative class is declared', () => {
     // Excluding the negative class must not become a blanket exemption.
-    const result = checkModelVocabulary(['HELP', 'OTHER', 'HOSPITAL'], 'OTHER');
+    const result = checkModelVocabulary(['HELP', 'OTHER', 'UNPUBLISHED_GLOSS'], 'OTHER');
     expect(result.ok).toBe(false);
-    expect(result.unknown).toEqual(['HOSPITAL']);
+    expect(result.unknown).toEqual(['UNPUBLISHED_GLOSS']);
   });
 
   it('treats a model with only the negative class as having no signs', () => {

@@ -121,7 +121,7 @@ export class SignLandmarker {
   static async create(options: LandmarkerInitOptions = {}): Promise<SignLandmarker> {
     const assets = { ...DEFAULT_LANDMARKER_ASSETS, ...options.assets };
     const numHands = options.numHands ?? 2;
-    const swapHandedness = options.swapHandedness ?? true;
+    const swapHandedness = options.swapHandedness ?? false;
     const timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
 
     if (typeof window === 'undefined') {

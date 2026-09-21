@@ -85,7 +85,9 @@ async function createOnnxClassifier(card: ModelCard, modelUrl: string): Promise<
   const inputName = session.inputNames[0];
   if (!inputName) throw new Error('The exported model exposes no inputs.');
 
-  const outputName = session.outputNames[0];
+  const outputName =
+    session.outputNames.find((name) => name.toLowerCase().includes('prob')) ??
+    session.outputNames[session.outputNames.length - 1];
   if (!outputName) throw new Error('The exported model exposes no outputs.');
 
   let disposed = false;

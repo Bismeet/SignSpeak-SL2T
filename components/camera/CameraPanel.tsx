@@ -14,7 +14,7 @@
  *   - offer one-tap pause, and a working alternative in every failure state.
  */
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { Callout } from '@/components/ui/Callout';
@@ -26,6 +26,7 @@ import { RecognitionChip } from '@/components/camera/RecognitionChip';
 import { TrackingIndicator } from '@/components/camera/TrackingIndicator';
 import { useSettings } from '@/lib/state/settings';
 import { config } from '@/lib/config';
+import { glossLabel } from '@/lib/signs/vocabulary';
 import type { AcceptedSign, UseSignRecognitionResult } from '@/lib/vision/use-sign-recognition';
 import { cn } from '@/lib/utils/cn';
 
@@ -132,6 +133,8 @@ export function CameraPanel({
     suggestPhraseBoard,
     dismissPhraseBoardSuggestion,
     setStrokeWeight: setOverlayStrokeWeight,
+    current,
+    rejectionHint,
   } = recognition;
 
   const active = camera === 'streaming' || camera === 'paused';
@@ -139,6 +142,28 @@ export function CameraPanel({
   // (High / Medium / Low) carries the meaning without colour; the percentage is shown
   // alongside it so the user can judge how close a call the prediction was.
   const showNumeric = true;
+
+  const activeCandidate = useMemo(() => {
+    if (handCount === 0) return null;
+    if (current?.accepted && current.label !== 'Not recognised' && current.label !== 'OTHER') {
+      return {
+        label: current.label,
+        probability: current.probability,
+        accepted: true,
+      };
+    }
+    const candidate = current?.top3?.find(
+      (c) => c.label !== 'OTHER' && c.label !== 'Not recognised' && c.probability >= 0.15,
+    );
+    if (candidate) {
+      return {
+        label: candidate.label,
+        probability: candidate.probability,
+        accepted: false,
+      };
+    }
+    return null;
+  }, [current, handCount]);
 
   const guideVisible = camera === 'streaming' && handCount === 0 && !replaying;
 
@@ -427,17 +452,46 @@ export function CameraPanel({
               </div>
             </div>
 
-            {/* Guide hint. Auto-hiding, and stacked *under* the readouts rather than centred
-                over them: the camera column is narrow, so a centred banner covered the FPS and
-                hand count exactly when they mattered. Static, not pulsing — the overlay never
-                animates on its own (docs/ui-ux-specification.md §1). */}
-            {detectedGesture ? (
-              <p className="overlay-chip self-start rounded-full bg-[#596F57] border border-white/20 px-[12px] py-[4px] text-[12px] font-bold leading-[16px] text-white shadow-md animate-pulse">
+            {/* Live Sign / Gesture / Guide pill. Displayed directly on video preview so signer has immediate feedback */}
+            {latestAccepted && handCount > 0 ? (
+              <p className="overlay-chip self-start inline-flex items-center gap-1.5 rounded-full bg-[#596F57] border border-white/20 px-[12px] py-[4px] text-[12px] font-bold leading-[16px] text-white shadow-md">
+                <span>✅ Recognised:</span>
+                <span className="capitalize">{glossLabel(latestAccepted.label)}</span>
+              </p>
+            ) : activeCandidate && handCount > 0 ? (
+              <div className="overlay-chip self-start inline-flex items-center gap-2 rounded-full bg-black/75 border border-white/20 px-[12px] py-[4px] text-[12px] font-semibold leading-[16px] text-white shadow-md backdrop-blur-sm">
+                <span
+                  className={cn(
+                    'h-2 w-2 rounded-full',
+                    activeCandidate.accepted ? 'bg-success' : 'bg-primary animate-pulse',
+                  )}
+                />
+                <span>
+                  {activeCandidate.accepted
+                    ? `Recognised: ${glossLabel(activeCandidate.label)}`
+                    : `Analysing: ${glossLabel(activeCandidate.label)} (${Math.round(activeCandidate.probability * 100)}%)`}
+                </span>
+                {!activeCandidate.accepted && (
+                  <div className="h-1.5 w-10 overflow-hidden rounded-full bg-white/20">
+                    <div
+                      className={cn(
+                        'h-full rounded-full transition-all duration-150',
+                        activeCandidate.probability >= 0.38 ? 'bg-[#596F57]' : 'bg-primary',
+                      )}
+                      style={{
+                        width: `${Math.min(100, Math.round((activeCandidate.probability / 0.38) * 100))}%`,
+                      }}
+                    />
+                  </div>
+                )}
+              </div>
+            ) : detectedGesture && handCount > 0 ? (
+              <p className="overlay-chip self-start rounded-full bg-[#596F57] border border-white/20 px-[12px] py-[4px] text-[12px] font-bold leading-[16px] text-white shadow-md">
                 👋 {detectedGesture.label} (Wave detected)
               </p>
-            ) : guideVisible ? (
+            ) : guideVisible || handCount === 0 ? (
               <p className="overlay-chip self-start rounded-full px-[10px] py-[4px] text-[11px] font-medium leading-[15px] text-white">
-                Hold both hands inside the frame
+                Hold hands inside frame to sign
               </p>
             ) : null}
           </div>
@@ -622,26 +676,91 @@ export function CameraPanel({
               />
               {simulateOcclusion
                 ? 'Insufficient landmark input — Occlusion detected (Simulation)'
-                : 'Recognition Model: Demo Mode / Untrained'}
+                : modelUnavailable || modelError
+                  ? 'Sign recognition offline'
+                  : handCount === 0
+                    ? 'Ready to recognise signs'
+                    : activeCandidate
+                      ? activeCandidate.accepted
+                        ? `Recognised: ${glossLabel(activeCandidate.label)}`
+                        : `Analysing: ${glossLabel(activeCandidate.label)} (${Math.round(activeCandidate.probability * 100)}%)`
+                      : `Tracking ${handCount} ${handCount === 1 ? 'hand' : 'hands'}`}
             </span>
             <div className="flex items-center gap-2">
-              <Badge
-                tone={simulateOcclusion ? 'warning' : 'neutral'}
-                icon={simulateOcclusion ? 'alert' : 'lock'}
-              >
-                {simulateOcclusion ? 'Occlusion Simulation' : '159D Pipeline Live'}
-              </Badge>
-              <Badge tone="neutral">Dataset Pending</Badge>
+              {simulateOcclusion ? (
+                <>
+                  <Badge tone="warning" icon="alert">
+                    Occlusion Simulation
+                  </Badge>
+                  <Badge tone="neutral">Fail-safe Engaged</Badge>
+                </>
+              ) : modelUnavailable || modelError ? (
+                <Badge tone="warning" icon="alert">
+                  Model Offline
+                </Badge>
+              ) : handCount === 0 ? (
+                <>
+                  <Badge tone="success" icon="check">
+                    ISL Model Active (8 Signs)
+                  </Badge>
+                  <Badge tone="neutral">159D ONNX</Badge>
+                </>
+              ) : activeCandidate?.accepted ? (
+                <>
+                  <Badge tone="success" icon="check">
+                    Recognised
+                  </Badge>
+                  <Badge tone="neutral">Confirmed</Badge>
+                </>
+              ) : activeCandidate ? (
+                <>
+                  <Badge tone="primary" icon="hand">
+                    Analysing
+                  </Badge>
+                  <Badge tone="neutral">Hold steady</Badge>
+                </>
+              ) : (
+                <>
+                  <Badge tone="success" icon="check">
+                    Live Tracking
+                  </Badge>
+                  <Badge tone="neutral">159D Active</Badge>
+                </>
+              )}
             </div>
           </div>
 
           <p className="mt-2 text-pretty text-sm text-muted">
             {simulateOcclusion
               ? 'Fail-safe active: recognition is withheld due to incomplete hand pose tracking (simulated keypoint dropout/occlusion). Demonstrates fail-safe behavior; no trained occlusion reconstruction is claimed.'
-              : handCount > 0
-                ? 'Hand pose tracked and 159D features extracted in real time. Clinical ISL classification model is untrained pending a multi-signer labeled clinical dataset.'
-                : 'No hands detected. Bring hands into the camera frame to view live hand tracking and 159D feature extraction.'}
+              : modelUnavailable || modelError
+                ? (modelError ?? 'Sign recognition model is unavailable.')
+                : handCount === 0
+                  ? 'Place your hands in the camera frame to sign (Help, Water, Yes, No, Hello, Thank you, Hospital, Drink) or wave for Hello 👋.'
+                  : activeCandidate
+                    ? activeCandidate.accepted
+                      ? `Confirmed sign "${glossLabel(activeCandidate.label)}". Dispatched to conversation.`
+                      : `Matching sign "${glossLabel(activeCandidate.label)}" with ${Math.round(activeCandidate.probability * 100)}% match. Hold steady to confirm.`
+                    : (rejectionHint ?? 'Tracking hand landmarks. Hold your sign clearly to recognise.')}
           </p>
+
+          {activeCandidate && !activeCandidate.accepted && (
+            <div className="mt-2.5 w-full">
+              <div className="flex items-center justify-between text-xs text-muted mb-1 font-medium">
+                <span>Confidence: {Math.round(activeCandidate.probability * 100)}%</span>
+                <span>Threshold: 38%</span>
+              </div>
+              <div className="h-1.5 w-full overflow-hidden rounded-full bg-line">
+                <div
+                  className={cn(
+                    'h-full rounded-full transition-all duration-150',
+                    activeCandidate.probability >= 0.38 ? 'bg-[#596F57]' : 'bg-primary',
+                  )}
+                  style={{ width: `${Math.min(100, Math.round((activeCandidate.probability / 0.38) * 100))}%` }}
+                />
+              </div>
+            </div>
+          )}
 
           <div className="mt-3 flex flex-wrap items-center gap-3 border-t border-line pt-2.5 text-xs text-muted">
             <span className="flex items-center gap-1.5 font-medium">
@@ -660,14 +779,14 @@ export function CameraPanel({
                 {simulateOcclusion
                   ? '11/21 keypoints (Occluded)'
                   : handCount > 0
-                    ? '21/21 keypoints (Clean)'
+                    ? `${landmarkCompleteness >= 0.95 ? '21/21' : `${Math.round(landmarkCompleteness * 21)}/21`} keypoints (Clean)`
                     : '0 keypoints'}
               </span>
             </span>
             <span>·</span>
             <span>159D Feature Vector: {handCount > 0 ? 'Extracted' : 'Idle'}</span>
             <span>·</span>
-            <span>Inference: On-device WASM</span>
+            <span>Inference: On-device WASM (sign-clf-v1)</span>
           </div>
         </div>
       )}
